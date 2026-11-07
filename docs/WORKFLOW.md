@@ -12,7 +12,8 @@
 4. **Review and merge.** The owner reviews and merges. Auto-merge is off unless the owner turns it
    on for a specific PR or label.
 5. **Deploy.** `.github/workflows/pages.yml` re-runs the checks on `main` and publishes the game
-   files to GitHub Pages.
+   files to GitHub Pages. Claude then shares the latest play link for mobile,
+   `https://hitoshi85.github.io/train-simulator/?v=<short-sha>`, so phones skip any cached copy.
 6. **Feedback.** Playtest notes go in a `feedback` issue (or a chat message); Claude turns them into
    new `task` issues.
 

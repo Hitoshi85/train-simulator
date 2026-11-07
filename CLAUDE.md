@@ -15,6 +15,9 @@ GitHub Pages deploys `index.html`, `game.js`, `style.css` (and `assets/` if pres
    browsers load the new version.
 6. Open the PR, wait for CI, fix failures until green. Never skip or weaken a test to get green.
 7. The owner merges. Do not merge or enable auto-merge unless the owner said so for that PR or label.
+8. After every shipped change (PR merged and the Pages deploy green), always share the latest
+   mobile play link with a cache-busting suffix of the deployed commit's short SHA:
+   `https://hitoshi85.github.io/train-simulator/?v=<short-sha>`
 
 ## Test hook
 
