@@ -1,0 +1,9 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #0d1117; color: #c9d1d9; font-family: system-ui, sans-serif; }
+main { max-width: 960px; margin: 0 auto; padding: 12px; text-align: center; }
+canvas { width: 100%; height: auto; display: block; border-radius: 8px; background: #000; touch-action: none; }
+#touch { display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+#touch button { font-size: 18px; padding: 12px 18px; border-radius: 8px; border: 1px solid #30363d; background: #21262d; color: #e6edf3; cursor: pointer; user-select: none; }
+#touch button:active { background: #30363d; }
+#touch .eb { background: #6e1b1b; }
+.help { font-size: 14px; opacity: .8; }
