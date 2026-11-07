@@ -35,7 +35,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | W3 | Agentic loop: tasks are GitHub issues labelled `task`; the owner approves with `ready`; one thread per issue opens a small PR; CI (ESLint + headless autopilot smoke test) must be green. See [docs/WORKFLOW.md](docs/WORKFLOW.md). | In place |
 | W4 | The owner merges. No merge or auto-merge unless the owner says so for that PR. | In place |
 | W5 | Merges to `main` deploy to GitHub Pages through the tested workflow. | In place |
-| W6 | After every shipped change, share the latest mobile link with a cache-busting suffix: `https://hitoshi85.github.io/train-simulator/?v=<short commit>`. | In place (repo rule in PR #13) |
+| W6 | After every shipped change, share the latest mobile link with a cache-busting suffix: `https://hitoshi85.github.io/train-simulator/?v=<short commit>`. | In place (repo rule, #13) |
 | W7 | Keep all requirements and feedback in this file, updated with every change and every piece of feedback. | In place |
 | W8 | Show results (e.g. test runs) in simple tables when asked. | Preference |
 
@@ -47,8 +47,8 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | 2026-11-07 | Lots of cats with a +2 cat bonus; random scenery every 10 s (Snowy Peaks, Red-Rock Canyon, Coastal Cliffs) | [#2](https://github.com/Hitoshi85/train-simulator/pull/2) |
 | 2026-11-07 | Cache-busting `?v=N` on game files so browsers load the latest version | [#3](https://github.com/Hitoshi85/train-simulator/pull/3) |
 | 2026-11-07 | CI (lint + headless autopilot test), tested Pages deploy, issue and PR templates | [#4](https://github.com/Hitoshi85/train-simulator/pull/4) |
-| 2026-11-07 | Rule: share the latest mobile link after every shipped change (open) | [#13](https://github.com/Hitoshi85/train-simulator/pull/13) |
-| 2026-11-07 | This requirements and feedback log (open) | this PR |
+| 2026-11-07 | Rule: share the latest mobile link after every shipped change | [#13](https://github.com/Hitoshi85/train-simulator/pull/13) |
+| 2026-11-07 | This requirements and feedback log | [#14](https://github.com/Hitoshi85/train-simulator/pull/14) |
 
 ## 3. Feedback log
 
@@ -65,8 +65,8 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-07 | Update the GitHub Pages link; how to hard refresh on mobile. | Pages live; add `?v=…` to the link on phones. |
 | 2026-11-07 | Set up a full agentic workflow. | CI, tested deploy, templates and issues #5–#12 (#4). Pages switched to GitHub Actions by Hitoshi. |
 | 2026-11-07 | Show test results in a simple table. | Done; all 7 tests pass. Became preference W8. |
-| 2026-11-07 | Always share the latest link for mobile. | Project rule; repo rule in #13 (W6). |
-| 2026-11-07 | Keep track of all requirements and feedback in one shareable, constantly updated place. | This file (W7). |
+| 2026-11-07 | Always share the latest link for mobile. | Project rule; repo rule merged in #13 (W6). |
+| 2026-11-07 | Keep track of all requirements and feedback in one shareable, constantly updated place. | This file (W7), #14. |
 
 ## 4. Open backlog
 
