@@ -4,7 +4,7 @@ A tiny, original train-driving game for the browser. Plain HTML/CSS/JS, no build
 
 ## Play
 
-Open `index.html` in any modern browser, or enable GitHub Pages (Settings → Pages → deploy from branch `main`, folder `/`).
+Open `index.html` in any modern browser, or play the GitHub Pages build (deployed from `main` by `.github/workflows/pages.yml`).
 
 ## How to drive
 
@@ -23,3 +23,15 @@ Each stop scores up to 1000 for accuracy (+500 for a perfect stop under 30 cm), 
 Lots of cats sit and stroll beside the track and wait on the platforms. Every cat you pass counts toward
 **Cats spotted** (top left) and is worth +2 points at the next station.
 Every 10 seconds the scenery fades to a random new scene: Snowy Peaks, Red-Rock Canyon or Coastal Cliffs.
+
+## Development
+
+No build step for the game. Dev tooling (lint and tests) needs Node 22:
+
+```sh
+npm ci
+npm run serve   # play at http://127.0.0.1:8080/
+npm run check   # ESLint + headless Playwright smoke test that drives the whole line
+```
+
+Work is tracked as GitHub issues and shipped as small PRs gated by CI. See [docs/WORKFLOW.md](docs/WORKFLOW.md).

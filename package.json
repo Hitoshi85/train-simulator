@@ -1,0 +1,17 @@
+{
+  "name": "aozora-line",
+  "private": true,
+  "description": "Aozora Line, an original browser train-driving game. Dev tooling only: the game itself has no build step.",
+  "scripts": {
+    "lint": "eslint .",
+    "test": "playwright test",
+    "check": "npm run lint && npm test",
+    "serve": "node tests/serve.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.63.0",
+    "eslint": "10.14.0",
+    "globals": "17.14.0"
+  }
+}
