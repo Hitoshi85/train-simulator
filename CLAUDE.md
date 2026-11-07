@@ -27,6 +27,15 @@ GitHub Pages deploys `index.html`, `game.js`, `style.css` (and `assets/` if pres
 Keep it working when refactoring; add to it when a new feature needs checking.
 `tests/smoke.spec.js` has an `autopilot()` that drives the full line through `act()`.
 
+## Requirements and feedback log
+
+`REQUIREMENTS.md` is the single shareable record of requirements, shipped changes, the owner's
+feedback and the backlog. Every thread keeps it current in the same PR as its change:
+add a row to **Shipped changes** for each change, log every piece of owner feedback (dated, with
+the outcome) in **Feedback log**, update requirement statuses, and keep **Open backlog** in step
+with the issues. A thread that only receives feedback (no code change) still opens a small PR
+updating the log.
+
 ## Commands
 
 - `npm run serve` serves the game at http://127.0.0.1:8080/
