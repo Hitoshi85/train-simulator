@@ -25,7 +25,8 @@
     { at: 4350, lim: 75 }, { at: 5300, lim: 60 }, { at: 6150, lim: 90 },
     { at: 7900, lim: 70 },
   ];
-  const DWELL = 30; // scheduled seconds at each station
+  const DWELL = 30;
+  const CAT_BONUS = 2; // points per cat spotted on the way // scheduled seconds at each station
 
   const limitAt = (p) => { let l = LIMITS[0].lim; for (const s of LIMITS) if (p >= s.at) l = s.lim; return l; };
   const curvature = (p) => 0.0007 * Math.sin(p / 520) * Math.sin(p / 1300 + 1);
@@ -52,7 +53,7 @@
       seg: 1,                     // index of the station we're heading to
       clock: 8 * 3600,            // game clock (s)
       sched: 0,                   // scheduled arrival
-      score: 0, stationScore: 0, overspeedPen: 0, overTimer: 0,
+      score: 0, stationScore: 0, overspeedPen: 0, overTimer: 0, cats: 0,
       results: [], msg: '', msgT: 0, timer: 0, failed: false,
     };
   }
@@ -61,7 +62,7 @@
   function startSegment() {
     const st = STATIONS[g.seg];
     g.sched = g.clock + st.run;
-    g.overspeedPen = 0; g.failed = false;
+    g.overspeedPen = 0; g.failed = false; g.cats = 0;
     g.state = 'running';
     flash('Depart for ' + st.name + '!');
   }
@@ -76,9 +77,10 @@
     let perfect = !g.failed && err < 0.3 ? 500 : 0;
     let timePts = g.failed ? 0 : Math.round(Math.max(0, 500 - Math.abs(diff) * (diff > 0 ? 10 : 5)));
     let smooth = !g.failed && g.lever >= -3 && g.lever < 0 ? 200 : 0;
-    const total = Math.max(0, stopPts + perfect + timePts + smooth - g.overspeedPen);
+    const catPts = g.cats * CAT_BONUS;
+    const total = Math.max(0, stopPts + perfect + timePts + smooth + catPts - g.overspeedPen);
     g.score += total;
-    g.lastResult = { name: st.name, d, diff, stopPts, perfect, timePts, smooth, pen: g.overspeedPen, total, failed: g.failed };
+    g.lastResult = { name: st.name, d, diff, stopPts, perfect, timePts, smooth, pen: g.overspeedPen, cats: g.cats, catPts, total, failed: g.failed };
     g.results.push(g.lastResult);
     g.state = 'arrived';
     g.timer = 0; g.msgT = 0;
@@ -91,7 +93,9 @@
     const a = accel(g.lever, g.v);
     g.v = Math.max(0, g.v + a * dt);
     if (g.v === 0 && g.lever <= 0) g.v = 0;
+    const before = g.pos;
     g.pos += g.v * dt;
+    g.cats += catsBetween(before, g.pos).length;
 
     // Speed limit
     const kmh = g.v * 3.6, lim = limitAt(g.pos);
@@ -147,28 +151,211 @@
   }
   const hash = (n) => { const x = Math.sin(n * 127.1) * 43758.5453; return x - Math.floor(x); };
 
+  // ---------- Scenery: three scenes, a random new one every 10 s, faded ----------
+  const SCENES = ['peaks', 'canyon', 'coast'];
+  const SCENE_NAMES = { peaks: 'Snowy Peaks', canyon: 'Red-Rock Canyon', coast: 'Coastal Cliffs' };
+  const scene = { cur: 'peaks', prev: 'peaks', blend: 1, t: 0 };
+  function updateScene(dt) {
+    scene.t += dt;
+    if (scene.blend < 1) scene.blend = Math.min(1, scene.blend + dt / 1.5);
+    if (scene.t >= 10) {
+      scene.t = 0;
+      const others = SCENES.filter((n) => n !== scene.cur);
+      scene.prev = scene.cur; scene.cur = others[Math.floor(Math.random() * others.length)];
+      scene.blend = 0;
+      if (g.state === 'running') flash('Now entering: ' + SCENE_NAMES[scene.cur], 2);
+    }
+  }
+  const SKY = {
+    peaks: ['#3f7fd0', '#dbeaf7'], canyon: ['#e07a3c', '#f6d29a'], coast: ['#2b8bd6', '#bfe7f5'],
+  };
+  const GROUND = { peaks: ['#a9c3a0', '#3e6b3a'], canyon: ['#d89a62', '#9c4f2c'], coast: ['#9fc46a', '#4d8a35'] };
+  function drawBackground(name, alpha, pan) {
+    const now = performance.now() / 1000;
+    let grd = ctx.createLinearGradient(0, 0, 0, HORIZON);
+    grd.addColorStop(0, SKY[name][0]); grd.addColorStop(1, SKY[name][1]);
+    ctx.fillStyle = grd; ctx.fillRect(0, 0, W, HORIZON);
+    if (name === 'peaks') {
+      // far range then near jagged snowy peaks
+      for (const [col, base, amp, f, ph] of [['#8fa3bd', 70, 50, 70, 0], ['#5d6f86', 40, 90, 110, 3]]) {
+        const pts = [];
+        for (let x = -60; x <= W + 60; x += 15) {
+          const wx = x + pan * (base > 50 ? 0.5 : 1);
+          const n = Math.abs(Math.sin(wx / f + ph)) * amp + Math.abs(Math.sin(wx / (f * 0.37) + ph * 2)) * amp * 0.35;
+          pts.push([x, HORIZON - base * 0.3 - n]);
+        }
+        ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(-60, HORIZON);
+        pts.forEach(([x, y]) => ctx.lineTo(x, y)); ctx.lineTo(W + 60, HORIZON); ctx.fill();
+        // snow caps: clip to the mountain, fill the top band white
+        ctx.save(); ctx.clip();
+        ctx.fillStyle = '#f4f8fc';
+        ctx.beginPath(); ctx.moveTo(-60, HORIZON - base * 0.3 - amp * 0.75);
+        pts.forEach(([x, y]) => ctx.lineTo(x, Math.min(y + 18, HORIZON - base * 0.3 - amp * 0.55 + 8 * Math.sin(x / 13))));
+        ctx.lineTo(W + 60, -10); ctx.lineTo(-60, -10); ctx.fill();
+        ctx.restore();
+      }
+    } else if (name === 'canyon') {
+      // sun
+      ctx.fillStyle = 'rgba(255,240,180,.9)'; ctx.beginPath(); ctx.arc(760 + pan * 0.1 % 200, 60, 26, 0, 7); ctx.fill();
+      // mesas and buttes with rock bands
+      for (const [col, band, y0, spacing, seed] of [['#b5643a', '#9a4e2b', 70, 260, 1], ['#8e3f22', '#73311a', 45, 200, 7]]) {
+        for (let i = -2; i < 8; i++) {
+          const k = i + Math.floor(-pan / spacing);
+          const cx = k * spacing + pan + (hash(k + seed) * 80);
+          const w = 70 + hash(k + seed + 3) * 120, h = y0 + hash(k + seed + 5) * 40;
+          ctx.fillStyle = col;
+          ctx.beginPath(); ctx.moveTo(cx - w / 2 - 25, HORIZON); ctx.lineTo(cx - w / 2, HORIZON - h); ctx.lineTo(cx + w / 2, HORIZON - h);
+          ctx.lineTo(cx + w / 2 + 25, HORIZON); ctx.fill();
+          ctx.fillStyle = band;
+          for (let b = 1; b < 4; b++) ctx.fillRect(cx - w / 2 - 6 * b, HORIZON - h + b * h / 4, w + 12 * b, 3);
+        }
+      }
+    } else if (name === 'coast') {
+      // headland cliffs on the left, open sea on the right
+      ctx.fillStyle = '#1d5f9a'; ctx.fillRect(0, HORIZON - 4, W, 4);
+      ctx.fillStyle = '#6b6f5a';
+      ctx.beginPath(); ctx.moveTo(0, HORIZON);
+      for (let x = 0; x <= W * 0.45; x += 15) ctx.lineTo(x, HORIZON - 55 + x * 0.1 + 10 * Math.sin((x + pan) / 40));
+      ctx.lineTo(W * 0.45 + 20, HORIZON); ctx.fill();
+      ctx.fillStyle = '#5c8d3a'; ctx.fillRect(0, HORIZON - 60, W * 0.42, 6);
+    }
+    // ground
+    grd = ctx.createLinearGradient(0, HORIZON, 0, VIEW_H);
+    grd.addColorStop(0, GROUND[name][0]); grd.addColorStop(1, GROUND[name][1]);
+    ctx.fillStyle = grd; ctx.fillRect(0, HORIZON, W, VIEW_H - HORIZON);
+    if (name === 'coast') {
+      // the land ends in a cliff edge at x = 11 m; beyond it, the open sea with waves rolling in
+      const ZMIN = 7, ZMAX = 600;
+      ctx.save();
+      ctx.fillStyle = '#1f6fb0';
+      ctx.beginPath();
+      for (let z = ZMIN; z <= ZMAX; z *= 1.08) { const p = project(11, 0, z); ctx.lineTo(p.x, p.y); }
+      ctx.lineTo(W, HORIZON); ctx.lineTo(W, VIEW_H); ctx.fill();
+      ctx.clip();
+      ctx.strokeStyle = 'rgba(255,255,255,.75)';
+      for (let row = 0; row < 14; row++) {
+        const xw = 13 + ((row * 9 - now * 4) % 126 + 126) % 126;
+        for (let s = Math.ceil(g.pos / 18) * 18; s < g.pos + 300; s += 18) {
+          const z = s - g.pos + (hash(s + row) * 9); if (z < ZMIN) continue;
+          const a = project(xw, 0, z), b = project(xw, 0, z + 7);
+          ctx.lineWidth = Math.max(1, 0.2 * a.s); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        }
+      }
+      ctx.restore();
+      // rocky cliff edge
+      ctx.fillStyle = '#7a6a55';
+      ctx.beginPath();
+      for (let z = ZMIN; z <= ZMAX; z *= 1.08) { const p = project(10.2, 0, z); ctx.lineTo(p.x, p.y); }
+      for (let z = ZMAX; z >= ZMIN; z /= 1.08) { const p = project(11, 0, z); ctx.lineTo(p.x, p.y); }
+      ctx.fill();
+      // spray where the waves crash
+      ctx.fillStyle = 'rgba(255,255,255,.85)';
+      for (let s = Math.ceil(g.pos / 6) * 6; s < g.pos + 200; s += 6) {
+        const z = s - g.pos; if (z < ZMIN) continue;
+        const burst = Math.max(0, Math.sin(now * 2.2 + hash(s) * 6.3));
+        const p = project(11.6, burst * 2.5, z);
+        ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1, (0.3 + 0.6 * burst) * p.s), 0, 7); ctx.fill();
+      }
+    }
+  }
+  function drawProp(name, b, k) {
+    const s = b.s;
+    if (name === 'peaks') { // pine tree
+      ctx.fillStyle = '#4a3220'; ctx.fillRect(b.x - 0.25 * s, b.y - 1.5 * s, 0.5 * s, 1.5 * s);
+      ctx.fillStyle = k < 0.2 ? '#1f4d2b' : '#2c6a3a';
+      for (let i = 0; i < 3; i++) {
+        const y = b.y - (1.2 + i * 1.8) * s, w = (2.4 - i * 0.6) * s;
+        ctx.beginPath(); ctx.moveTo(b.x - w, y); ctx.lineTo(b.x + w, y); ctx.lineTo(b.x, y - 3 * s); ctx.fill();
+      }
+      ctx.fillStyle = '#f4f8fc'; ctx.beginPath(); ctx.moveTo(b.x - 0.6 * s, b.y - 6.6 * s); ctx.lineTo(b.x + 0.6 * s, b.y - 6.6 * s); ctx.lineTo(b.x, b.y - 7.8 * s); ctx.fill();
+    } else if (name === 'canyon') {
+      if (k < 0.3) { // red boulder
+        ctx.fillStyle = '#9c4a28'; ctx.beginPath(); ctx.ellipse(b.x, b.y - 1 * s, 2.2 * s, 1.3 * s, 0, 0, 7); ctx.fill();
+      } else { // saguaro cactus
+        ctx.fillStyle = '#3f7d3a';
+        ctx.fillRect(b.x - 0.35 * s, b.y - 5 * s, 0.7 * s, 5 * s);
+        ctx.fillRect(b.x - 1.4 * s, b.y - 3.2 * s, 0.5 * s, 1.6 * s); ctx.fillRect(b.x - 1.4 * s, b.y - 1.9 * s, 1.1 * s, 0.45 * s);
+        ctx.fillRect(b.x + 0.9 * s, b.y - 4 * s, 0.5 * s, 1.6 * s); ctx.fillRect(b.x + 0.3 * s, b.y - 2.6 * s, 1.1 * s, 0.45 * s);
+      }
+    } else { // coast: windswept palm
+      ctx.strokeStyle = '#7a5a3a'; ctx.lineWidth = Math.max(1, 0.4 * s);
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.quadraticCurveTo(b.x + 1 * s, b.y - 3 * s, b.x + 0.4 * s, b.y - 6 * s); ctx.stroke();
+      ctx.strokeStyle = '#2f8a3c'; ctx.lineWidth = Math.max(1, 0.35 * s);
+      for (let i = 0; i < 6; i++) {
+        const a = -Math.PI / 2 + (i - 2.5) * 0.55;
+        ctx.beginPath(); ctx.moveTo(b.x + 0.4 * s, b.y - 6 * s);
+        ctx.quadraticCurveTo(b.x + 0.4 * s + Math.cos(a) * 2 * s, b.y - 6 * s + Math.sin(a) * 2 * s - 0.5 * s, b.x + 0.4 * s + Math.cos(a) * 3 * s, b.y - 6 * s + Math.sin(a) * 1.5 * s + 1.2 * s);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // ---------- Cats (lots of them) ----------
+  const CAT_COLORS = [
+    ['#e8913a', '#c46d1e'], ['#2a2a2e', '#111'], ['#f2f0ea', '#cfcac0'], ['#8d8f96', '#6b6d73'], ['#f2f0ea', '#e8913a'], ['#7a5236', '#4f3322'],
+  ];
+  const CAT_STEP = 2.5;
+  function catAt(s) {
+    const h = hash(s * 1.37 + 0.21);
+    if (h > 0.7) return null;
+    const side = h < 0.35 ? -1 : 1;
+    let x = side * (2.4 + hash(s + 9.1) * 6), y = 0;
+    const onPlatform = STATIONS.some((S) => s > S.pos - 160 && s < S.pos + 30);
+    if (onPlatform && x < 0) { if (x > -3.3) x = -3.3 - hash(s + 2) * 4; y = 1.1; }
+    return { s, x, y, col: CAT_COLORS[Math.floor(hash(s + 5.3) * CAT_COLORS.length)], walk: hash(s + 7.7) < 0.35, face: hash(s + 3.3) < 0.5 ? -1 : 1, ph: hash(s + 1.1) * 6 };
+  }
+  function catsBetween(a, b) {
+    const out = [];
+    for (let s = Math.ceil(a / CAT_STEP) * CAT_STEP; s < b; s += CAT_STEP) { const c = catAt(s); if (c) out.push(c); }
+    return out;
+  }
+  function drawCat(c, p) {
+    const s = p.s * 1.4; // cats drawn a bit larger than life so you can spot them
+    if (s < 1.2) return;
+    const t = performance.now() / 1000 + c.ph;
+    const [body, accent] = c.col, f = c.face;
+    const bob = c.walk ? Math.abs(Math.sin(t * 6)) * 0.04 * s : 0;
+    const x = p.x, y = p.y - bob;
+    ctx.fillStyle = body;
+    if (c.walk) {
+      // walking: long body, legs swinging
+      ctx.fillRect(x - 0.3 * s, y - 0.28 * s, 0.6 * s, 0.18 * s);
+      ctx.strokeStyle = body; ctx.lineWidth = Math.max(1, 0.06 * s);
+      for (const [lx, ph] of [[-0.25, 0], [0.22, Math.PI]]) {
+        const sw = Math.sin(t * 6 + ph) * 0.06 * s;
+        ctx.beginPath(); ctx.moveTo(x + lx * s, y - 0.12 * s); ctx.lineTo(x + lx * s + sw, y); ctx.stroke();
+      }
+      const hx = x + f * 0.36 * s, hy = y - 0.33 * s;
+      ctx.beginPath(); ctx.arc(hx, hy, 0.13 * s, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(hx - 0.11 * s, hy - 0.06 * s); ctx.lineTo(hx - 0.06 * s, hy - 0.22 * s); ctx.lineTo(hx, hy - 0.1 * s);
+      ctx.moveTo(hx + 0.11 * s, hy - 0.06 * s); ctx.lineTo(hx + 0.06 * s, hy - 0.22 * s); ctx.lineTo(hx, hy - 0.1 * s); ctx.fill();
+      ctx.strokeStyle = accent; ctx.lineWidth = Math.max(1, 0.05 * s);
+      ctx.beginPath(); ctx.moveTo(x - f * 0.3 * s, y - 0.24 * s); ctx.quadraticCurveTo(x - f * 0.5 * s, y - 0.3 * s, x - f * 0.45 * s, y - (0.5 + 0.06 * Math.sin(t * 3)) * s); ctx.stroke();
+    } else {
+      // sitting: pear body, head, ears, curled tail that sways
+      ctx.beginPath(); ctx.ellipse(x, y - 0.17 * s, 0.17 * s, 0.19 * s, 0, 0, 7); ctx.fill();
+      const hy = y - 0.42 * s;
+      ctx.beginPath(); ctx.arc(x, hy, 0.12 * s, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(x - 0.11 * s, hy - 0.04 * s); ctx.lineTo(x - 0.08 * s, hy - 0.2 * s); ctx.lineTo(x - 0.01 * s, hy - 0.1 * s);
+      ctx.moveTo(x + 0.11 * s, hy - 0.04 * s); ctx.lineTo(x + 0.08 * s, hy - 0.2 * s); ctx.lineTo(x + 0.01 * s, hy - 0.1 * s); ctx.fill();
+      ctx.strokeStyle = accent; ctx.lineWidth = Math.max(1, 0.05 * s);
+      const sway = Math.sin(t * 2) * 0.08 * s;
+      ctx.beginPath(); ctx.moveTo(x + f * 0.14 * s, y - 0.03 * s); ctx.quadraticCurveTo(x + f * 0.35 * s, y, x + f * 0.3 * s + sway, y - 0.25 * s); ctx.stroke();
+      if (s > 25) { // eyes when close
+        ctx.fillStyle = '#9be36a';
+        ctx.beginPath(); ctx.arc(x - 0.045 * s, hy, 0.022 * s, 0, 7); ctx.arc(x + 0.045 * s, hy, 0.022 * s, 0, 7); ctx.fill();
+      }
+    }
+  }
+
   function drawWorld() {
     offCache.length = 0;
     { let off = 0, slope = 0; for (let z = 0; z <= 600; z += 5) { offCache.push(off); slope += curvature(g.pos + z) * 5; off += slope * 5; } }
 
-    // sky
-    let grd = ctx.createLinearGradient(0, 0, 0, HORIZON);
-    grd.addColorStop(0, '#5aa0e6'); grd.addColorStop(1, '#cfe6f7');
-    ctx.fillStyle = grd; ctx.fillRect(0, 0, W, HORIZON);
-    // mountains (parallax with curve)
     const pan = -offCache[offCache.length - 1] * 0.15 - g.pos * 0.002;
-    ctx.fillStyle = '#7c95a8';
-    ctx.beginPath(); ctx.moveTo(0, HORIZON);
-    for (let x = -40; x <= W + 40; x += 20) {
-      const wx = x + pan;
-      const h = 40 + 30 * Math.sin(wx / 90) + 18 * Math.sin(wx / 37 + 2);
-      ctx.lineTo(x, HORIZON - h);
-    }
-    ctx.lineTo(W, HORIZON); ctx.fill();
-    // ground
-    grd = ctx.createLinearGradient(0, HORIZON, 0, VIEW_H);
-    grd.addColorStop(0, '#8fb36b'); grd.addColorStop(1, '#4f7a2e');
-    ctx.fillStyle = grd; ctx.fillRect(0, HORIZON, W, VIEW_H - HORIZON);
+    drawBackground(scene.prev, 1, pan);
+    if (scene.blend < 1) { ctx.globalAlpha = scene.blend; drawBackground(scene.cur, scene.blend, pan); ctx.globalAlpha = 1; }
+    else drawBackground(scene.cur, 1, pan);
 
     const ZMIN = CAM_H * FOCAL / (VIEW_H - HORIZON) * 0.9, ZMAX = 600;
     // ballast
@@ -199,8 +386,13 @@
     for (let s = Math.ceil(g.pos / 50) * 50; s < g.pos + ZMAX; s += 50) objs.push({ z: s - g.pos, t: 'pole' });
     for (let s = Math.ceil(g.pos / 23) * 23; s < g.pos + 400; s += 23) {
       const h = hash(s);
-      if (h < 0.6) objs.push({ z: s - g.pos, t: 'tree', x: (h < 0.3 ? -1 : 1) * (7 + h * 30), k: h });
+      if (h < 0.6) {
+        const x = (h < 0.3 ? -1 : 1) * (7 + h * 30);
+        if (scene.blend < 1) objs.push({ z: s - g.pos, t: 'prop', x, k: h, sc: scene.prev, a: 1 - scene.blend });
+        objs.push({ z: s - g.pos, t: 'prop', x, k: h, sc: scene.cur, a: scene.blend });
+      }
     }
+    for (const c of catsBetween(g.pos + ZMIN, g.pos + 120)) objs.push({ z: c.s - g.pos, t: 'cat', c });
     for (const L of LIMITS) { const z = L.at - 150 - g.pos; if (z > 0 && z < ZMAX) objs.push({ z, t: 'limit', lim: L.lim }); }
     for (let i = 0; i < STATIONS.length; i++) {
       const S = STATIONS[i];
@@ -216,11 +408,11 @@
         const b = project(3, 0, o.z), t = project(3, 6.5, o.z), arm = project(-0.2, 6.2, o.z);
         ctx.strokeStyle = '#555'; ctx.lineWidth = Math.max(1, 0.25 * b.s);
         ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(t.x, t.y); ctx.lineTo(arm.x, arm.y); ctx.stroke();
-      } else if (o.t === 'tree') {
-        const b = project(o.x, 0, o.z), s = b.s;
-        ctx.fillStyle = '#5b3d22'; ctx.fillRect(b.x - 0.3 * s, b.y - 2 * s, 0.6 * s, 2 * s);
-        ctx.fillStyle = o.k < 0.2 ? '#2f6b2a' : '#3d8a35';
-        ctx.beginPath(); ctx.arc(b.x, b.y - 4 * s, 2.5 * s, 0, 7); ctx.fill();
+      } else if (o.t === 'prop') {
+        if (o.a <= 0.01 || (o.sc === 'coast' && o.x > 9)) continue;
+        ctx.globalAlpha = o.a; drawProp(o.sc, project(o.x, 0, o.z), o.k); ctx.globalAlpha = 1;
+      } else if (o.t === 'cat') {
+        drawCat(o.c, project(o.c.x, o.c.y, o.z));
       } else if (o.t === 'limit') {
         const b = project(2.4, 0, o.z), t = project(2.4, 3, o.z), s = b.s;
         ctx.strokeStyle = '#333'; ctx.lineWidth = Math.max(1, 0.1 * s);
@@ -374,6 +566,11 @@
   }
 
   function drawOverlay() {
+    // cat counter + scene name
+    ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(24, 22, 190, 46);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#f2b8d0'; ctx.font = 'bold 18px sans-serif'; ctx.fillText('Cats spotted: ' + g.cats, 34, 37);
+    ctx.fillStyle = '#ddd'; ctx.font = '12px sans-serif'; ctx.fillText(SCENE_NAMES[scene.blend < 0.5 ? scene.prev : scene.cur], 34, 57);
     if (g.msgT > 0 && g.msg) {
       ctx.globalAlpha = Math.min(1, g.msgT);
       ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(W / 2 - 230, 64, 460, 36);
@@ -395,6 +592,7 @@
         `Time: ${Math.abs(r.diff).toFixed(1)} s ${r.diff > 0 ? 'late' : 'early'}  → ${r.timePts}`,
         r.smooth ? `Smooth stop bonus +${r.smooth}` : 'Tip: stop on B1–B3 for a smooth-stop bonus',
         r.pen ? { t: `Overspeed penalty -${r.pen}`, c: '#ff7b72' } : 'No overspeed. Nice!',
+        { t: `Cats spotted: ${r.cats}  → +${r.catPts}`, c: '#f2b8d0' },
       ];
       lines.push({ t: `Stop total: ${r.total}   ·   Score: ${g.score}`, c: '#7ee787' });
       lines.push({ t: g.seg >= STATIONS.length - 1 ? 'Press Enter for final results' : 'Press Enter to depart', c: '#ffd33d' });
@@ -414,12 +612,12 @@
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    update(dt);
+    update(dt); updateScene(dt);
     drawWorld(); drawDash(); drawOverlay();
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 
   // Exposed for automated testing
-  window.__train = { get state() { return g; }, act, STATIONS, LIMITS, accel, limitAt };
+  window.__train = { get state() { return g; }, scene, act, STATIONS, LIMITS, accel, limitAt };
 })();
