@@ -25,8 +25,8 @@
     { at: 4350, lim: 75 }, { at: 5300, lim: 60 }, { at: 6150, lim: 90 },
     { at: 7900, lim: 70 },
   ];
-  const DWELL = 30;
-  const CAT_BONUS = 2; // points per cat spotted on the way // scheduled seconds at each station
+  const DWELL = 30;          // scheduled seconds at each station
+  const CAT_BONUS = 2; // points per cat spotted on the way
 
   const limitAt = (p) => { let l = LIMITS[0].lim; for (const s of LIMITS) if (p >= s.at) l = s.lim; return l; };
   const curvature = (p) => 0.0007 * Math.sin(p / 520) * Math.sin(p / 1300 + 1);
@@ -309,9 +309,11 @@
     for (let s = Math.ceil(a / CAT_STEP) * CAT_STEP; s < b; s += CAT_STEP) { const c = catAt(s); if (c) out.push(c); }
     return out;
   }
+  const stats = { catsDrawn: 0, frames: 0 }; // render counters for automated tests
   function drawCat(c, p) {
     const s = p.s * 1.4; // cats drawn a bit larger than life so you can spot them
     if (s < 1.2) return;
+    stats.catsDrawn++;
     const t = performance.now() / 1000 + c.ph;
     const [body, accent] = c.col, f = c.face;
     const bob = c.walk ? Math.abs(Math.sin(t * 6)) * 0.04 * s : 0;
@@ -609,15 +611,17 @@
   }
 
   // ---------- Main loop ----------
+  function render() { stats.frames++; drawWorld(); drawDash(); drawOverlay(); }
+  function step(dt) { update(dt); updateScene(dt); }
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    update(dt); updateScene(dt);
-    drawWorld(); drawDash(); drawOverlay();
+    if (!hook.paused) { step(dt); render(); }
     requestAnimationFrame(frame);
   }
-  requestAnimationFrame(frame);
 
-  // Exposed for automated testing
-  window.__train = { get state() { return g; }, scene, act, STATIONS, LIMITS, accel, limitAt };
+  // Exposed for automated testing: set paused = true, then drive the game with step(dt) and render().
+  const hook = { get state() { return g; }, scene, stats, act, step, render, paused: false, STATIONS, LIMITS, accel, limitAt, catsBetween };
+  window.__train = hook;
+  requestAnimationFrame(frame);
 })();
