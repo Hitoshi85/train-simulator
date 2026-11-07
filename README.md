@@ -34,4 +34,5 @@ npm run serve   # play at http://127.0.0.1:8080/
 npm run check   # ESLint + headless Playwright smoke test that drives the whole line
 ```
 
+Requirements, feedback and the backlog are kept in [REQUIREMENTS.md](REQUIREMENTS.md).
 Work is tracked as GitHub issues and shipped as small PRs gated by CI. See [docs/WORKFLOW.md](docs/WORKFLOW.md).

@@ -1,0 +1,90 @@
+# Aozora Line: requirements and feedback log
+
+The single, always-current record of what the game must do, what has shipped, what the owner
+(Hitoshi) has asked for, and what is next. Every change to the game, and every piece of feedback,
+is recorded here in the same PR or thread that handles it (see the rule in [CLAUDE.md](CLAUDE.md)).
+
+- **Play (desktop or phone):** https://hitoshi85.github.io/train-simulator/ (add `?v=<short commit>`
+  on a phone to skip a cached copy)
+- **Backlog:** [open issues](https://github.com/Hitoshi85/train-simulator/issues)
+- **Last updated:** 2026-11-07
+
+## 1. Core requirements
+
+### Game
+
+| # | Requirement | Status |
+|---|---|---|
+| R1 | Original browser train-driving game in the Japanese train-sim genre. Not a copy: no names, characters, art, music, routes or UI from commercial titles. Working title "Aozora Line". | Done |
+| R2 | Plain HTML/CSS/JS, no build step; runs in any modern browser. | Done |
+| R3 | Power notches P1–P5, brake notches B1–B8, neutral and an emergency brake. Keyboard (↑/W, ↓/S, N, Space, Enter) and on-screen buttons for touch. | Done |
+| R4 | One fictional line: start at Hinata, then 4 stops (Kawabe, Momijidai, Shiokaze, Tsukimino). | Done |
+| R5 | Speed limits shown by the track and on the speedometer; overspeed costs points. | Done |
+| R6 | Stop-on-the-mark scoring at each station: up to 1000 for accuracy (+500 under 30 cm), up to 500 for punctuality, +200 for a smooth stop on B1–B3, 0 for overrunning the mark by 30 m. | Done |
+| R7 | Cats appear frequently: lots of cats beside the track and on platforms ("cats everywhere"). Original cats only. | Done |
+| R8 | Cat-spotting counter ("Cats spotted", top left); each cat passed is worth +2 points at the next station. | Done (rebalance planned in #5) |
+| R9 | Scenery changes every 10 seconds, picked at random with a short fade, between three dramatic scenes: Snowy Peaks (mountain), Red-Rock Canyon (desert), Coastal Cliffs (ocean). | Done |
+| R10 | Playable on a phone from a shareable web link that always shows the latest version (no stale cache). | Done (phone comfort in #10) |
+
+### How we work
+
+| # | Requirement | Status |
+|---|---|---|
+| W1 | All work runs in cloud sessions, not tied to the owner's computer. | In place |
+| W2 | Before changing the game, ask clarifying questions **one at a time**, each with a recommended option. | In place |
+| W3 | Agentic loop: tasks are GitHub issues labelled `task`; the owner approves with `ready`; one thread per issue opens a small PR; CI (ESLint + headless autopilot smoke test) must be green. See [docs/WORKFLOW.md](docs/WORKFLOW.md). | In place |
+| W4 | The owner merges. No merge or auto-merge unless the owner says so for that PR. | In place |
+| W5 | Merges to `main` deploy to GitHub Pages through the tested workflow. | In place |
+| W6 | After every shipped change, share the latest mobile link with a cache-busting suffix: `https://hitoshi85.github.io/train-simulator/?v=<short commit>`. | In place (repo rule in PR #13) |
+| W7 | Keep all requirements and feedback in this file, updated with every change and every piece of feedback. | In place |
+| W8 | Show results (e.g. test runs) in simple tables when asked. | Preference |
+
+## 2. Shipped changes
+
+| Date | Change | PR |
+|---|---|---|
+| 2026-11-07 | Basic browser train-driving game: notches, speed limits, 4 stops, stop-on-mark scoring | [#1](https://github.com/Hitoshi85/train-simulator/pull/1) |
+| 2026-11-07 | Lots of cats with a +2 cat bonus; random scenery every 10 s (Snowy Peaks, Red-Rock Canyon, Coastal Cliffs) | [#2](https://github.com/Hitoshi85/train-simulator/pull/2) |
+| 2026-11-07 | Cache-busting `?v=N` on game files so browsers load the latest version | [#3](https://github.com/Hitoshi85/train-simulator/pull/3) |
+| 2026-11-07 | CI (lint + headless autopilot test), tested Pages deploy, issue and PR templates | [#4](https://github.com/Hitoshi85/train-simulator/pull/4) |
+| 2026-11-07 | Rule: share the latest mobile link after every shipped change (open) | [#13](https://github.com/Hitoshi85/train-simulator/pull/13) |
+| 2026-11-07 | This requirements and feedback log (open) | this PR |
+
+## 3. Feedback log
+
+Newest at the bottom. "Outcome" says what was done about it.
+
+| Date | Feedback / request from Hitoshi | Outcome |
+|---|---|---|
+| 2026-11-07 | Build a very basic HTML train simulator in the Densha de Go style, ready in 15 minutes, using cloud sessions. | Built as an original game, Aozora Line (#1). |
+| 2026-11-07 | "How many stations are active?" | 4 stops on one line; more can be added on request. |
+| 2026-11-07 | Add cats frequently and change the scenery (mountain, desert, ocean) every 10 seconds; ask clarifying questions first. | Shipped in #2. |
+| 2026-11-07 | Ask the questions one by one. | Became rule W2. |
+| 2026-11-07 | Answers: cats beside the track and platforms (not on the track); "lots, cats everywhere"; cat-spotting bonus; random scene order with a fade; dramatic scenes; update the link and open a PR. | Implemented as chosen in #2. |
+| 2026-11-07 | Not seeing the latest updates on the original link; no cats visible. | Browser cache. Rebuilt the playable link as one file; added cache-busting (#3). |
+| 2026-11-07 | Update the GitHub Pages link; how to hard refresh on mobile. | Pages live; add `?v=…` to the link on phones. |
+| 2026-11-07 | Set up a full agentic workflow. | CI, tested deploy, templates and issues #5–#12 (#4). Pages switched to GitHub Actions by Hitoshi. |
+| 2026-11-07 | Show test results in a simple table. | Done; all 7 tests pass. Became preference W8. |
+| 2026-11-07 | Always share the latest link for mobile. | Project rule; repo rule in #13 (W6). |
+| 2026-11-07 | Keep track of all requirements and feedback in one shareable, constantly updated place. | This file (W7). |
+
+## 4. Open backlog
+
+Add the `ready` label to an issue to start it.
+
+| Issue | Task |
+|---|---|
+| [#5](https://github.com/Hitoshi85/train-simulator/issues/5) | Rebalance the cat bonus so driving skill decides the score (cats are ~40% of a stop's score today) |
+| [#6](https://github.com/Hitoshi85/train-simulator/issues/6) | Save the best score and rank in the browser |
+| [#7](https://github.com/Hitoshi85/train-simulator/issues/7) | Add pause with P / Esc and a pause button |
+| [#8](https://github.com/Hitoshi85/train-simulator/issues/8) | Add synthesized sound effects with a mute toggle |
+| [#9](https://github.com/Hitoshi85/train-simulator/issues/9) | Add gradients that affect acceleration, with gradient posts |
+| [#10](https://github.com/Hitoshi85/train-simulator/issues/10) | Make the game comfortable to play on a phone |
+| [#11](https://github.com/Hitoshi85/train-simulator/issues/11) | Add an Express mode that skips a station |
+| [#12](https://github.com/Hitoshi85/train-simulator/issues/12) | Add an evening run with lighting and rain |
+
+## 5. Ideas mentioned, not yet requested
+
+- More stations or extra lines.
+- A native iOS version (SwiftUI + SceneKit) of the same original game.
+- CI posting a test-results table on each PR.
