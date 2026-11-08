@@ -24,7 +24,7 @@ function autopilot({ overrunAt = -1, dt = 0.05, mode = 'local' } = {}) {
   const T = window.__train;
   T.paused = true;
   const g = () => T.state;
-  const DECEL = 0.45; // planned braking (m/s²), comfortably under B8
+  const DECEL = 0.45; // planned braking (m/s²), comfortably under B3
   T.act(mode);    // pick Local or Express on the title screen
   T.act('enter'); // title -> running
   for (let guard = 0; guard < 400000 && g().state !== 'end'; guard++) {
@@ -34,16 +34,16 @@ function autopilot({ overrunAt = -1, dt = 0.05, mode = 'local' } = {}) {
     const d = st.pos - s.pos;
     let target;
     if (s.seg === overrunAt) {
-      target = s.failed ? s.lever : 5; // floor it straight through the station
+      target = s.failed ? s.lever : 3; // floor it straight through the station
     } else {
       let vt = (T.limitAt(s.pos) - 4) / 3.6;
       for (const L of T.LIMITS) if (L.at > s.pos) vt = Math.min(vt, Math.sqrt(((L.lim - 4) / 3.6) ** 2 + 2 * DECEL * (L.at - s.pos)));
       vt = Math.min(vt, Math.sqrt(2 * DECEL * Math.max(0, d - 0.3)) + (d > 3 ? 1 : 0.3));
-      if (d < 0.25) target = -8;
+      if (d < 0.25) target = -3;
       else if (s.v > vt + 0.2) {
         const need = (s.v * s.v) / (2 * Math.max(0.3, d - 0.2));
-        target = d < 150 ? -Math.min(8, Math.max(1, Math.ceil((need - 0.02) / 0.13))) : -4;
-      } else if (s.v < vt - 1) target = 4;
+        target = d < 150 ? -Math.min(3, Math.max(1, Math.ceil((need - 0.02) / 0.35))) : -2;
+      } else if (s.v < vt - 1) target = 3;
       else if (s.v < vt - 0.3) target = 1;
       else target = 0;
     }
@@ -71,7 +71,7 @@ test('train physics and speed limits behave', async ({ page }) => {
   const r = await page.evaluate(() => {
     const T = window.__train;
     return {
-      p5: T.accel(5, 0), p1: T.accel(1, 0), n: T.accel(0, 20), b1: T.accel(-1, 10), b8: T.accel(-8, 10), eb: T.accel(-9, 10),
+      p5: T.accel(3, 0), p1: T.accel(1, 0), n: T.accel(0, 20), b1: T.accel(-1, 10), b8: T.accel(-3, 10), eb: T.accel(-4, 10),
       lim0: T.limitAt(0), lim300: T.limitAt(300), limEnd: T.limitAt(99999),
     };
   });
@@ -123,13 +123,77 @@ test('keyboard controls move the lever', async ({ page }) => {
   await page.keyboard.press('Enter');
   await expect.poll(() => page.evaluate(() => window.__train.state.state)).toBe('running');
   const lever = () => page.evaluate(() => window.__train.state.lever);
-  expect(await lever()).toBe(-8);
+  expect(await lever()).toBe(1); // departs on P1
   for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowUp');
-  expect(await lever()).toBe(2);
+  expect(await lever()).toBe(3); // P3 is the top power notch
+  for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowDown');
+  expect(await lever()).toBe(-3); // B3 is the top service brake
   await page.keyboard.press('KeyN');
   expect(await lever()).toBe(0);
   await page.keyboard.press('Space');
-  expect(await lever()).toBe(-9);
+  expect(await lever()).toBe(-4); // EB
+  await page.keyboard.press('ArrowUp');
+  expect(await lever()).toBe(-3); // releasing EB goes to B3
+});
+
+test('every departure starts on P1 and the train rolls off', async ({ page }) => {
+  const r = await page.evaluate(() => {
+    const T = window.__train;
+    T.paused = true;
+    T.act('enter');
+    const first = T.state.lever;
+    for (let i = 0; i < 40; i++) T.step(0.05);
+    const v = T.state.v;
+    // jump to the next station's stop mark and stop there to depart again
+    T.state.pos = T.STATIONS[T.state.seg].pos; T.state.v = 0; T.act('brake'); T.act('brake'); T.step(0.05);
+    const arrived = T.state.state;
+    T.act('enter');
+    return { first, v, arrived, second: T.state.lever };
+  });
+  expect(r.first).toBe(1);
+  expect(r.v).toBeGreaterThan(0);
+  expect(r.arrived).toBe('arrived');
+  expect(r.second).toBe(1);
+});
+
+test('no dark pillar down the middle of the cab view', async ({ page }) => {
+  const dark = await page.evaluate(() => {
+    const T = window.__train;
+    T.paused = true; T.act('enter'); T.render();
+    const c = document.getElementById('game').getContext('2d');
+    let n = 0;
+    for (let y = 30; y < 160; y += 10) { const [r, g, b] = c.getImageData(480, y, 1, 1).data; if (r + g + b < 120) n++; }
+    return n;
+  });
+  expect(dark).toBe(0);
+});
+
+test('front and rear cameras show the same landscape as the cab, sides matching', async ({ page }) => {
+  const r = await page.evaluate(() => {
+    const T = window.__train;
+    T.paused = true; T.act('enter');
+    T.state.pos = 2500;
+    T.scene.cur = 'seaside'; T.scene.prev = 'seaside'; T.scene.blend = 1;
+    const c = document.getElementById('game').getContext('2d');
+    // which half of a row is bluer (sea / open sky) than green (hills / meadow)
+    const blueSide = (y) => {
+      const row = c.getImageData(0, y, 960, 1).data;
+      let L = 0, R = 0;
+      for (let x = 20; x < 940; x++) { const k = x * 4, d = row[k + 2] - row[k + 1]; if (x < 480) L += d; else R += d; }
+      return L > R ? 'left' : 'right';
+    };
+    const out = {};
+    for (const id of ['cab', 'front', 'rear']) {
+      T.renderCam(id);
+      out[id] = { sky: blueSide(150), ground: blueSide(200) };
+    }
+    return out;
+  });
+  expect(r.cab).toEqual({ sky: 'right', ground: 'right' }); // sea on the right going forward
+  for (const id of ['front', 'rear']) {
+    expect(r[id].sky, `${id} cam backdrop on the sea side`).toBe(r[id].ground);
+    expect(r[id].ground, `${id} cam looks back, so the sea is on its left`).toBe('left');
+  }
 });
 
 test('autopilot drives the whole line and scores every stop', async ({ page }) => {
