@@ -20,11 +20,12 @@ test.afterEach(() => {
 // Runs inside the page. A simple automatic driver: holds a bit under the line speed, slows for
 // lower limits ahead, and brakes on a curve that ends on the STOP mark. Moves the lever one notch
 // per step through act(), like a player would. Returns per-station results.
-function autopilot({ overrunAt = -1, dt = 0.05 } = {}) {
+function autopilot({ overrunAt = -1, dt = 0.05, mode = 'local' } = {}) {
   const T = window.__train;
   T.paused = true;
   const g = () => T.state;
   const DECEL = 0.45; // planned braking (m/s²), comfortably under B8
+  T.act(mode);    // pick Local or Express on the title screen
   T.act('enter'); // title -> running
   for (let guard = 0; guard < 400000 && g().state !== 'end'; guard++) {
     const s = g();
@@ -251,4 +252,59 @@ test('P / Esc pause the run, freezing the train and clock; hiding the tab pauses
     document.dispatchEvent(new Event('visibilitychange'));
   });
   expect((await read()).paused).toBe(true);
+});
+
+test('Express mode passes about half the stops with a tighter timetable and higher limits', async ({ page }) => {
+  // The mode is picked on the title screen with the keyboard (▲/▼ toggle, L/E pick).
+  const mode = () => page.evaluate(() => window.__train.state.mode);
+  expect(await mode()).toBe('local');
+  await page.keyboard.press('ArrowUp');
+  expect(await mode()).toBe('express');
+  await page.keyboard.press('KeyL');
+  expect(await mode()).toBe('local');
+  await page.keyboard.press('KeyE');
+  expect(await mode()).toBe('express');
+  // ...and by touch, with the on-screen ▼ button.
+  await page.locator('#touch button[data-act="brake"]').click();
+  expect(await mode()).toBe('local');
+  await page.locator('#touch button[data-act="power"]').click();
+  expect(await mode()).toBe('express');
+
+  const lim = await page.evaluate(() => ({ express: window.__train.limitAt(300), passed: window.__train.STATIONS.filter((_, i) => i > 0 && !window.__train.stopsAt(i, 'express')).map((s) => s.name) }));
+  expect(lim.express).toBe(100); // 85 on Local
+  expect(lim.passed).toEqual(['Kozakura', 'Nanohana', 'Hotarubashi', 'Yuzuhara']);
+
+  // Passed stations show a PASS board instead of a STOP mark.
+  const pass = await page.evaluate(() => {
+    const T = window.__train;
+    T.paused = true;
+    const before = T.stats.passDrawn;
+    T.state.pos = T.STATIONS[1].pos - 120;
+    T.render();
+    T.state.pos = 0;
+    return T.stats.passDrawn - before;
+  });
+  expect(pass).toBeGreaterThan(0);
+
+  const run = await page.evaluate(autopilot, { mode: 'express' });
+  expect(run.state).toBe('end');
+  expect(run.results.map((r) => r.name)).toEqual(['Kawabe', 'Momijidai', 'Shiokaze', 'Tsukimino']);
+  for (const r of run.results) {
+    expect(r.failed, `${r.name} overrun`).toBe(false);
+    expect(Math.abs(r.d), `${r.name} stop error (m)`).toBeLessThan(5);
+    expect(r.total, `${r.name} total`).toBeGreaterThan(0);
+  }
+  expect(await page.evaluate(() => window.__train.state.passed.length)).toBe(4);
+  // The end screen names the mode.
+  await page.evaluate(() => window.__train.render());
+  // Tighter timetable: each Express run is much shorter than the Local runs it replaces
+  // (including their station dwells), yet the autopilot still arrives on time.
+  const tt = await page.evaluate(() => {
+    const S = window.__train.STATIONS, out = [];
+    let prev = 0;
+    S.forEach((s, i) => { if (i > 0 && s.exp !== undefined) { let local = 0; for (let k = prev + 1; k <= i; k++) local += S[k].run + (k < i ? 30 : 0); out.push([s.exp, local]); prev = i; } });
+    return out;
+  });
+  for (const [exp, local] of tt) expect(exp).toBeLessThan(local * 0.75);
+  for (const r of run.results) expect(r.timePts, `${r.name} on time`).toBeGreaterThan(0);
 });
