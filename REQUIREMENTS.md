@@ -33,10 +33,11 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | R16 | Uphill and downhill sections up to ±25‰ (moderate, chosen by Hitoshi) change acceleration by about g × ‰ / 1000: coasting slows uphill and speeds up downhill. Gradient posts (number and up/down arm, "L" for level) stand beside the track at each change, and the dashboard shows the current gradient. Stations stay on level track. Closes #9. | Done (#18) |
 | R17 | Express mode chosen on the title screen (▲/▼ or L/E, touch ▲/▼): stops at Enoshima, Kamakura-Kokomae, Inamuragasaki and Kamakura (formerly Kawabe, Momijidai, Shiokaze, Tsukimino) and passes the other 4 stations (green PASS board, no judging), with a tighter timetable (about 35–40% shorter than the Local runs it replaces) and +15 km/h on open track (85 → 100, 90 → 105). The end screen names the mode. Closes #11. | Done (#20) |
 | R18 | Hand-painted pastoral look inspired by the soft style of Japanese animated films, with original art only (no characters, creatures or scenes from any film): watercolour skies with towering clouds, layered hazy hills, lush greenery, warm light and paper grain. Covers scenery, stations, the train and cats; the dashboard stays clean. | Done (#19) |
-| R19 | Light shifts along the line: morning at Hinata, bright midday mid-line, a golden evening near Tsukimino. | Done (#19) |
+| R19 | Light shifts along the line: morning at Fujisawa, bright midday mid-line, a golden evening in the Hase temple hills, and night by Kamakura (dark sky, stars and moon, lit house windows, platform lamps, the train's headlights and lit carriages, a headlight beam down the track). | Done (#19, night in #25) |
 | R20 | Rich living world: drifting clouds, flocks of birds, swaying trees and grass, wildflowers, drifting petals by day, rippling rice paddies, washing lines, sailboats, sun rays and fireflies in the evening. | Done (#19) |
 | R21 | Camera insets match the cab view: same scene and time of day, with the sea, hills and hillside town on the correct side for cameras that look back along the train; no centre pillar across the cab window. | Done |
 | R22 | Real towns in Japan with original art in the painted style: houses with tiled roofs and coastal black pines in the towns, the sea, sailboats and Enoshima island with its lighthouse tower on the coast, temple halls, a vermilion shrine gate, maples and hydrangeas in the Hase hills. Distant landmarks (Mt Fuji across the bay, Enoshima island, the Inamuragasaki cape) are placed by real map bearing, so each camera sees them where they really are (Mt Fuji shows in the rear camera along the coast). Route data (stations, scene zones, map layout, landmarks) lives in one `ROUTE` object so more lines can be added. | Done (#24) |
+| R23 | Weather that changes during the run (Hitoshi's choice): each run picks rain or snow at random, which rolls in partway (after about 3.2 to 5 km) and may clear before the end. Rain: grey overcast sky, rain streaks, drops on the cab glass. Snow: falling flakes and snow settling on the ground, hills and roofs. A notice says when it starts and clears, and the label shows "rain" or "snow". All camera insets show it too. Stays within the 16 ms phone frame budget, also checked at night in rain and snow near a station. Closes #12. | Done (#25) |
 
 ### How we work
 
@@ -77,6 +78,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | 2026-11-08 | Merge queue with auto-merge (green + screenshot + 800 lines or fewer, oldest first, rebase and re-test) and a post-deploy live check that posts the phone link | [#22](https://github.com/Hitoshi85/train-simulator/pull/22) |
 | 2026-11-08 | 3 power and 3 brake notches, departures start on P1; black centre line (cab window pillar) removed; front and rear cameras now show the sea, hills and town on the matching side; insets render at a quarter of the screen size so three cameras near a station stay inside the 16 ms phone frame budget | This PR |
 | 2026-11-08 | Real towns in Japan: the line now follows the seaside line from Fujisawa to Kamakura via Enoshima (real station names, kanji boards), scenery by town (towns, pine woods, coast, temple hills), and Mt Fuji, Enoshima island and the Inamuragasaki cape placed by map bearing in every camera. Preview: [docs/screens/real-towns.png](docs/screens/real-towns.png) | [#24](https://github.com/Hitoshi85/train-simulator/pull/24) |
+| 2026-11-08 | Morning to night along the line, with rain or snow rolling in partway (random each run) and clearing; night lights; also in every camera inset; phone frame check at night in rain and snow. Closes #12. Preview: [docs/screens/time-and-weather.png](docs/screens/time-and-weather.png) | [#25](https://github.com/Hitoshi85/train-simulator/pull/25) |
 
 ## 3. Feedback log
 
@@ -122,7 +124,7 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-08 | Question: what should "start at acceleration 1" do? (options: P1 at every departure, P1 only at the first departure, first Power press jumps to P1) | Hitoshi chose P1 at every departure (R3). |
 | 2026-11-08 | Hitoshi dropped the bullet train and course select for now ("Don't do 4 for now", "Don't do 3 either"). | Not planned for now; the route data is still kept in one object so more lines are easy later. |
 | 2026-11-08 | Question: which real line should the 9 stations follow? (options: seaside line Fujisawa to Kamakura via Enoshima, mountain line Odawara to Gora, city corridor Tokyo to Yokohama) | Hitoshi chose the seaside line; built in #24 (R4, R9, R22). |
-| 2026-11-08 | Question: how should day, night, rain and snow be chosen? (options: pick before each run, random each run, change during the run) | Hitoshi chose change during the run: morning to evening to night, with rain or snow rolling in partway. Built next, in a follow-up PR (covers #12). |
+| 2026-11-08 | Question: how should day, night, rain and snow be chosen? (options: pick before each run, random each run, change during the run) | Hitoshi chose change during the run: morning to evening to night, with rain or snow rolling in partway. Built in #25 (R19, R23), closes #12. |
 
 ## 4. Open backlog
 
@@ -130,7 +132,7 @@ Add the `ready` label to an issue to start it.
 
 | Issue | Task | Status |
 |---|---|---|
-| [#12](https://github.com/Hitoshi85/train-simulator/issues/12) | Add an evening run with lighting and rain | In progress: day to night with rain or snow during the run (follow-up to #24) |
+| (none open) | | |
 
 Removed by the owner on 2026-11-08 (closed as not planned): [#5](https://github.com/Hitoshi85/train-simulator/issues/5) cat bonus rebalance, [#6](https://github.com/Hitoshi85/train-simulator/issues/6) save best score.
 

@@ -42,10 +42,11 @@ for (const [name, viewport] of [['portrait', { width: 390, height: 844 }], ['lan
       expect(fs.statSync(path.join(SHOTS, `${name}-running.png`)).size).toBeGreaterThan(10000);
     });
 
-    test(`frame draw time stays under ${FRAME_BUDGET_MS} ms`, async ({ page }) => {
+    for (const wx of [null, 'snow', 'rain']) test(`frame draw time stays under ${FRAME_BUDGET_MS} ms${wx ? ` at night in ${wx}, near a station` : ''}`, async ({ page }) => {
       await startRun(page);
-      const t = await page.evaluate(() => {
+      const t = await page.evaluate((wx) => {
         const T = window.__train;
+        if (wx) { T.setWeather(wx); T.state.pos = 8250; T.state.seg = T.STATIONS.length - 1; } // night, three cameras
         const times = [];
         for (let i = 0; i < 200; i++) {
           T.step(1 / 30);
@@ -56,15 +57,15 @@ for (const [name, viewport] of [['portrait', { width: 390, height: 844 }], ['lan
         times.sort((a, b) => a - b);
         const at = (q) => times[Math.min(times.length - 1, Math.floor(q * times.length))];
         return { median: at(0.5), p95: at(0.95) };
-      });
-      const line = `| ${name} | ${t.median.toFixed(1)} ms | ${t.p95.toFixed(1)} ms | ${FRAME_BUDGET_MS} ms |\n`;
-      console.log(`frame time ${name}: median ${t.median.toFixed(1)} ms, p95 ${t.p95.toFixed(1)} ms`);
+      }, wx);
+      const line = `| ${name}${wx ? ', night ' + wx : ''} | ${t.median.toFixed(1)} ms | ${t.p95.toFixed(1)} ms | ${FRAME_BUDGET_MS} ms |\n`;
+      console.log(`frame time ${name}${wx ? ' night ' + wx : ''}: median ${t.median.toFixed(1)} ms, p95 ${t.p95.toFixed(1)} ms`);
       if (process.env.GITHUB_STEP_SUMMARY) {
         const head = fs.existsSync(process.env.GITHUB_STEP_SUMMARY) && fs.readFileSync(process.env.GITHUB_STEP_SUMMARY, 'utf8').includes('Frame draw time')
           ? '' : '### Frame draw time (phone size)\n\n| Phone | Median | 95th pct | Budget |\n|---|---|---|---|\n';
         fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, head + line);
       }
-      expect(t.median, `median frame draw time in ${name}`).toBeLessThanOrEqual(FRAME_BUDGET_MS);
+      expect(t.median, `median frame draw time in ${name}${wx ? ' at night in ' + wx : ''}`).toBeLessThanOrEqual(FRAME_BUDGET_MS);
     });
   });
 }
