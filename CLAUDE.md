@@ -27,8 +27,8 @@ GitHub Pages deploys `index.html`, `game.js`, `style.css` (and `assets/` if pres
 
 `game.js` exposes `window.__train` for tests: `state` (live game state), `act(action)`,
 `step(dt)` (advance the simulation; does nothing while the player has paused), `setPaused(bool)` (player pause, also `state.paused`), `render()` (draw one frame), `paused` (stop the real-time loop),
-`stats` (`frames`, `catsDrawn`, `trainDrawn`, `insets` (count per camera id: front, rear, platform),
-`lastInsets` (ids of insets drawn in the last frame)), `sound` (`muted`, `started`, `toggle()`), plus `STATIONS`, `LIMITS`, `accel`, `limitAt`, `catsBetween`.
+`stats` (`frames`, `catsDrawn`, `trainDrawn`, `gradePostsDrawn`, `insets` (count per camera id: front, rear, platform),
+`lastInsets` (ids of insets drawn in the last frame)), `sound` (`muted`, `started`, `toggle()`), plus `STATIONS`, `LIMITS`, `GRADES`, `accel(lever, v, grade‰)`, `limitAt`, `gradeAt`, `catsBetween`.
 Keep it working when refactoring; add to it when a new feature needs checking.
 `tests/smoke.spec.js` has an `autopilot()` that drives the full line through `act()`.
 
