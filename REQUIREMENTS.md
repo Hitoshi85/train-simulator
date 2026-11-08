@@ -81,7 +81,7 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-07 | New standing rule: always ask clarifying questions one by one, each with 3 options and a recommendation. | Implemented in this PR (W2, CLAUDE.md). |
 | 2026-11-07 | New standing rule: always use multiple subagents that work in parallel, but balance token usage. | Implemented in this PR (W9, CLAUDE.md). |
 
-| 2026-11-08 | Backlog review: approved #9 (gradients) as written. | Implemented in the gradients PR (R14); default steepness "moderate, up to ±25‰" pending Hitoshi's answer to the clarifying question. |
+| 2026-11-08 | Backlog review: approved #9 (gradients) as written. | Implemented in the gradients PR (R14); Hitoshi chose "moderate, up to ±25‰" as the steepness. |
 
 ## 4. Open backlog
 
