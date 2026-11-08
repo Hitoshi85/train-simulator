@@ -34,7 +34,7 @@ GitHub Pages deploys `index.html`, `game.js`, `style.css` (and `assets/` if pres
 ## Test hook
 
 `game.js` exposes `window.__train` for tests: `state` (live game state), `act(action)`,
-`step(dt)` (advance the simulation; does nothing while the player has paused), `setPaused(bool)` (player pause, also `state.paused`), `render()` (draw one frame), `paused` (stop the real-time loop),
+`save` (on-device progress: `data` with `v`, `settings`, `best`, `run`; `record()`, `setRun()`, `clear()`), `step(dt)` (advance the simulation; does nothing while the player has paused), `setPaused(bool)` (player pause, also `state.paused`), `render()` (draw one frame), `paused` (stop the real-time loop),
 `stats` (`frames`, `catsDrawn`, `trainDrawn`, `gradePostsDrawn`, `trees`, `birds`, `fireflies`, `insets` (count per camera id: front, rear, platform),
 `lastInsets` (ids of insets drawn in the last frame)), `sound` (`muted`, `started`, `toggle()`), plus `STATIONS`, `LIMITS`, `GRADES`, `accel(lever, v, grade‰)`, `limitAt`, `gradeAt`, `catsBetween`, `lightAt(pos)` (time-of-day light, `.phase` morning, midday or evening).
 Keep it working when refactoring; add to it when a new feature needs checking.
