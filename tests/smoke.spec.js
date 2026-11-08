@@ -195,3 +195,26 @@ test('M key and Sound button toggle mute, remembered across reloads', async ({ p
   for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowUp');
   await page.waitForTimeout(1500);
 });
+
+test('P / Esc pause the run, freezing the train and clock; hiding the tab pauses too', async ({ page }) => {
+  const read = () => page.evaluate(() => { const s = window.__train.state; return { paused: s.paused, pos: s.pos, clock: s.clock, lever: s.lever }; });
+  await page.evaluate(() => { const T = window.__train; T.paused = true; T.act('enter'); for (let i = 0; i < 13; i++) T.act('power'); T.step(1); });
+  await page.keyboard.press('KeyP');
+  const a = await read();
+  expect(a.paused).toBe(true);
+  await page.evaluate(() => { const T = window.__train; T.act('brake'); T.step(1); T.step(1); T.render(); });
+  const b = await read();
+  expect(b).toEqual(a); // nothing moves and the lever is locked while paused
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => window.__train.step(1));
+  const c = await read();
+  expect(c.paused).toBe(false);
+  expect(c.pos).toBeGreaterThan(a.pos);
+  expect(c.clock).toBeGreaterThan(a.clock);
+  // Switching away from the tab pauses automatically.
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  expect((await read()).paused).toBe(true);
+});
