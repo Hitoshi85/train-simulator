@@ -39,6 +39,8 @@ GitHub Pages deploys `index.html`, `game.js`, `style.css` (and `assets/` if pres
 `lastInsets` (ids of insets drawn in the last frame)), `sound` (`muted`, `started`, `toggle()`), plus `STATIONS`, `LIMITS`, `GRADES`, `accel(lever, v, grade‰)`, `limitAt`, `gradeAt`, `catsBetween`, `lightAt(pos)` (time-of-day light, `.phase` morning, midday or evening).
 Keep it working when refactoring; add to it when a new feature needs checking.
 `tests/smoke.spec.js` has an `autopilot()` that drives the full line through `act()`.
+`tests/phone-checks.spec.js` saves phone screenshots to `phone-screenshots/` (a CI artifact) and enforces a
+16 ms median frame-draw budget at phone size. `.github/workflows/review.yml` runs the Claude review agent on each PR.
 
 ## Requirements and feedback log
 
