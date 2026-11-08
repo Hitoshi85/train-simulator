@@ -23,7 +23,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | R6 | Stop-on-the-mark scoring at each station: up to 1000 for accuracy (+500 under 30 cm), up to 500 for punctuality, +200 for a smooth stop on B1–B3, 0 for overrunning the mark by 30 m. | Done |
 | R7 | Cats appear frequently: lots of cats beside the track and on platforms ("cats everywhere"). Original cats only. | Done |
 | R8 | Cat-spotting counter ("Cats spotted", top left); each cat passed is worth +2 points at the next station. | Done (rebalance #5 dropped by owner, 2026-11-08) |
-| R9 | Scenery changes every 10 seconds, picked at random with a short fade, between three dramatic scenes: Snowy Peaks (mountain), Red-Rock Canyon (desert), Coastal Cliffs (ocean). | Done |
+| R9 | Scenery changes every 10 seconds, picked at random with a short fade, between three pastoral scenes: Rice Paddy Valley, Forest Hills, Seaside Town (replaced Snowy Peaks, Red-Rock Canyon and Coastal Cliffs in the painted-look PR). | Done (this PR) |
 | R10 | Playable on a phone from a shareable web link that always shows the latest version (no stale cache). | Done (phone layout in R14) |
 | R11 | Live camera insets in the top-right of the view, always on: FRONT CAM (outside camera ahead of the train looking back at its nose and side) and REAR CAM (from the tail looking back down the track). Rendered by the game, not real video. | Done (#15) |
 | R12 | Platform camera inset that appears in sync as the train approaches each station (last 500 m), showing the train pulling in. | Done (#15) |
@@ -32,6 +32,9 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | R15 | Pause with P or Esc and a Pause / Resume button; the train, clock and sound freeze; switching tabs or apps pauses automatically; tap, P, Esc or Enter resumes. Closes #7. | Done (#17) |
 | R16 | Uphill and downhill sections up to ±25‰ (moderate, chosen by Hitoshi) change acceleration by about g × ‰ / 1000: coasting slows uphill and speeds up downhill. Gradient posts (number and up/down arm, "L" for level) stand beside the track at each change, and the dashboard shows the current gradient. Stations stay on level track. Closes #9. | Done (#18) |
 | R17 | Express mode chosen on the title screen (▲/▼ or L/E, touch ▲/▼): stops at Kawabe, Momijidai, Shiokaze and Tsukimino and passes the other 4 stations (green PASS board, no judging), with a tighter timetable (about 35–40% shorter than the Local runs it replaces) and +15 km/h on open track (85 → 100, 90 → 105). The end screen names the mode. Closes #11. | Done (this PR) |
+| R18 | Hand-painted pastoral look inspired by the soft style of Japanese animated films, with original art only (no characters, creatures or scenes from any film): watercolour skies with towering clouds, layered hazy hills, lush greenery, warm light and paper grain. Covers scenery, stations, the train and cats; the dashboard stays clean. | Done (this PR) |
+| R19 | Light shifts along the line: morning at Hinata, bright midday mid-line, a golden evening near Tsukimino. | Done (this PR) |
+| R20 | Rich living world: drifting clouds, flocks of birds, swaying trees and grass, wildflowers, drifting petals by day, rippling rice paddies, washing lines, sailboats, sun rays and fireflies in the evening. | Done (this PR) |
 
 ### How we work
 
@@ -47,8 +50,9 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | W8 | Show results (e.g. test runs) in simple tables when asked. | Preference |
 | W9 | Use several focused subagents in parallel for independent parts of a task, keeping token use balanced (few agents, small prompts). | In place |
 | W10 | When asking for approval on backlog items, ask one item at a time with 3 options, and always include an option to remove the item from the backlog without doing it (the issue is closed as not planned). | In place |
-| W11 | Automatic phone and speed checks on every PR: CI takes phone screenshots (portrait 390×844 and landscape 844×390, title and mid-run; artifact `phone-screenshots`) and fails a PR if the median time to draw one frame at phone size is over 16 ms (60 fps). Frame times appear in the CI job summary. | In place (this PR) |
-| W12 | An automated review agent (Claude Code GitHub Action, check "Claude review") reviews every PR for bugs, posts inline and summary comments, and fails the check only for a must-fix problem. Needs a `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` repo secret; skipped (green) until one is added. | Workflow in place (this PR); sign-in deferred by Hitoshi, reviews skip until a secret is added |
+| W11 | With each PR, share a screenshot of the game that highlights the new feature. | In place (2026-11-08) |
+| W12 | Automatic phone and speed checks on every PR: CI takes phone screenshots (portrait 390×844 and landscape 844×390, title and mid-run; artifact `phone-screenshots`) and fails a PR if the median time to draw one frame at phone size is over 16 ms (60 fps). Frame times appear in the CI job summary. | In place (this PR) |
+| W13 | An automated review agent (Claude Code GitHub Action, check "Claude review") reviews every PR for bugs, posts inline and summary comments, and fails the check only for a must-fix problem. Needs a `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` repo secret; skipped (green) until one is added. | Workflow in place (this PR); sign-in deferred by Hitoshi, reviews skip until a secret is added |
 
 ## 2. Shipped changes
 
@@ -64,6 +68,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | 2026-11-08 | Phone layout without scrolling in portrait and landscape, bigger touch buttons, help hidden on touch (closes #10); pause with P / Esc / button and auto-pause on tab switch (closes #7) | [#17](https://github.com/Hitoshi85/train-simulator/pull/17) |
 | 2026-11-08 | Uphill and downhill gradients (up to ±25‰) that change acceleration, gradient posts beside the track and a GRADIENT readout on the dashboard; stations are level. Closes #9 | [#18](https://github.com/Hitoshi85/train-simulator/pull/18) |
 | 2026-11-08 | Express mode: pick Local or Express on the title screen; Express passes 4 of the 8 stops, runs a tighter timetable and has higher limits on open track. Closes #11 | (this PR) |
+| 2026-11-08 | Hand-painted pastoral look: watercolour sky and clouds, three pastoral scenes, morning-to-evening light along the line, living details (birds, swaying trees and grass, petals, paddies, sailboats, fireflies), repainted stations and train. Preview: [docs/screens/painted-look.png](docs/screens/painted-look.png) | [#19](https://github.com/Hitoshi85/train-simulator/pull/19) |
 | 2026-11-08 | CI phone screenshots and a 16 ms frame-draw budget at phone size on every PR; Claude review agent workflow | (this PR) |
 
 ## 3. Feedback log
@@ -96,10 +101,14 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-08 | Hitoshi said "Merge" for the gradients PR. | Merged #18 once CI was green. |
 | 2026-11-08 | Express build after the backlog review: approved Express mode (#11) with one change, skip about half of the 8 stops instead of just one; keep the tighter timetable, higher limits and the mode choice on the title screen. | Issue #11 updated; built in this PR (R17): Express stops at Kawabe, Momijidai, Shiokaze and Tsukimino. |
 | 2026-11-08 | New shorthand: a message of only "m" means merge the PR. Hitoshi sent "M" for the Express PR. | Express PR rebased onto #17 and #18 and merged once CI was green. |
-| 2026-11-08 | Asked whether the setup is fully agentic; approved all six proposed upgrades, then dropped the daily backlog routine (item 3). | Auto-merge, merge queue and post-deploy check built in a separate PR; phone screenshots, frame budget and review agent built in this PR (W11, W12). |
+| 2026-11-08 | "Change graphics to Ghibli style." | Built as an original hand-painted pastoral look (R18), no film characters, creatures or scenes. |
+| 2026-11-08 | Answers: scenery plus train and stations (dashboard stays clean); light shifts along the line (morning, midday, evening); rich living world; swap the three scenes for pastoral ones (rice paddies, forest hills, seaside town). | Implemented in the painted-look PR (R9, R18–R20). |
+| 2026-11-08 | New standing rule: with each PR, share a screenshot of the game and highlight the new feature. | Rule W11; #19 includes [docs/screens/painted-look.png](docs/screens/painted-look.png). |
+| 2026-11-08 | Hitoshi sent "M" for the painted-look PR. | Merged the painted-look PR (#19) after bringing in #17, #18 and #20, once CI was green. |
+| 2026-11-08 | Asked whether the setup is fully agentic; approved all six proposed upgrades, then dropped the daily backlog routine (item 3). | Auto-merge, merge queue and post-deploy check built in a separate PR; phone screenshots, frame budget and review agent built in this PR (W12, W13). |
 | 2026-11-08 | Hitoshi wants to talk only in the project chat (one orchestrator), not in each thread. | Threads send questions, ready PRs and manual steps through the project chat. |
-| 2026-11-08 | Question: how strict should the frame-rate check be? (options: fixed 60 fps budget, no slowdown vs main, report only) | Hitoshi chose the fixed budget: fail over 16 ms median at phone size (W11). |
-| 2026-11-08 | Question: how should the review agent sign in? (options: Claude subscription token, Anthropic API key, not yet) | Hitoshi chose "not yet": the review workflow ships and skips until a secret is added (W12). |
+| 2026-11-08 | Question: how strict should the frame-rate check be? (options: fixed 60 fps budget, no slowdown vs main, report only) | Hitoshi chose the fixed budget: fail over 16 ms median at phone size (W12). |
+| 2026-11-08 | Question: how should the review agent sign in? (options: Claude subscription token, Anthropic API key, not yet) | Hitoshi chose "not yet": the review workflow ships and skips until a secret is added (W13). |
 
 ## 4. Open backlog
 
