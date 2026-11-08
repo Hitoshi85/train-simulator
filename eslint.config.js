@@ -10,7 +10,7 @@ module.exports = [
     rules: { 'no-unused-vars': ['error', { args: 'none' }] },
   },
   {
-    files: ['eslint.config.js', 'playwright.config.js', 'tests/**/*.js'],
+    files: ['eslint.config.js', 'playwright.config.js', 'tests/**/*.js', '.github/scripts/**/*.js'],
     languageOptions: { ecmaVersion: 2022, sourceType: 'commonjs', globals: { ...globals.node, ...globals.browser } },
   },
 ];
