@@ -13,40 +13,65 @@
   const FOCAL = 600;           // projection focal length (px)
 
   // ---------- Route (all fictional) ----------
+  // run: scheduled seconds from the previous stop (Local). exp: seconds from the previous
+  // Express stop; stations without exp are passed by the Express without stopping.
   const STATIONS = [
-    { name: 'Hinata',     pos: 0 },
+    { name: 'Hinata',     pos: 0, exp: 0 },
     { name: 'Kozakura',   pos: 900,  run: 95 },
-    { name: 'Kawabe',     pos: 1800, run: 90 },
+    { name: 'Kawabe',     pos: 1800, run: 90, exp: 130 },
     { name: 'Nanohana',   pos: 3000, run: 115 },
-    { name: 'Momijidai',  pos: 4200, run: 110 },
+    { name: 'Momijidai',  pos: 4200, run: 110, exp: 175 },
     { name: 'Hotarubashi', pos: 5100, run: 95 },
-    { name: 'Shiokaze',   pos: 6000, run: 90 },
+    { name: 'Shiokaze',   pos: 6000, run: 90, exp: 140 },
     { name: 'Yuzuhara',   pos: 7300, run: 120 },
-    { name: 'Tsukimino',  pos: 8600, run: 120 },
+    { name: 'Tsukimino',  pos: 8600, run: 120, exp: 160 },
   ];
-  const LIMITS = [
+  const MODES = ['local', 'express'];
+  const MODE_NAMES = { local: 'Local', express: 'Express' };
+  const LOCAL_LIMITS = [
     { at: 0, lim: 45 }, { at: 250, lim: 85 }, { at: 1450, lim: 70 },
     { at: 1900, lim: 85 }, { at: 3000, lim: 55 }, { at: 3600, lim: 85 },
     { at: 4350, lim: 75 }, { at: 5300, lim: 60 }, { at: 6150, lim: 90 },
     { at: 7900, lim: 70 },
   ];
+  // Gradients in per mille (‰): + uphill, - downhill, from `at` until the next entry.
+  // Stations sit on level track so stopping on the mark stays fair.
+  const GRADES = [
+    { at: 0, pm: 0 }, { at: 200, pm: 10 }, { at: 550, pm: 0 },
+    { at: 1100, pm: -15 }, { at: 1500, pm: 0 },
+    { at: 2000, pm: 20 }, { at: 2450, pm: -10 }, { at: 2700, pm: 0 },
+    { at: 3200, pm: 25 }, { at: 3600, pm: 0 }, { at: 3700, pm: -20 }, { at: 3950, pm: 0 },
+    { at: 4400, pm: -25 }, { at: 4800, pm: 0 },
+    { at: 5300, pm: 15 }, { at: 5700, pm: 0 },
+    { at: 6200, pm: -10 }, { at: 6600, pm: 25 }, { at: 7000, pm: 0 },
+    { at: 7500, pm: -25 }, { at: 8000, pm: -10 }, { at: 8300, pm: 0 },
+  ];
+  // Express: +15 km/h on the open stretches (85 km/h and up); slower sections stay as they are.
+  const EXPRESS_LIMITS = LOCAL_LIMITS.map((L) => (L.lim >= 85 ? { at: L.at, lim: L.lim + 15 } : L));
+  let LIMITS = LOCAL_LIMITS;
+  // Does the train stop at station i in the given mode?
+  const stopsAt = (i, mode) => mode !== 'express' || STATIONS[i].exp !== undefined;
+  const stopCount = (mode) => STATIONS.filter((_, i) => i > 0 && stopsAt(i, mode)).length;
   const TRAIN_LEN = 80;      // 4 cars of 20 m
   const DWELL = 30;          // scheduled seconds at each station
   const CAT_BONUS = 2; // points per cat spotted on the way
 
   const limitAt = (p) => { let l = LIMITS[0].lim; for (const s of LIMITS) if (p >= s.at) l = s.lim; return l; };
+  const gradeAt = (p) => { let v = GRADES[0].pm; for (const s of GRADES) if (p >= s.at) v = s.pm; return v; };
   const curvature = (p) => 0.0007 * Math.sin(p / 520) * Math.sin(p / 1300 + 1);
 
   // ---------- Train physics ----------
   // lever: -9 = EB, -8..-1 = B8..B1, 0 = N, 1..5 = P1..P5
   const leverName = (l) => l === -9 ? 'EB' : l < 0 ? 'B' + (-l) : l === 0 ? 'N' : 'P' + l;
-  function accel(lever, v) {
+  // grade in ‰: gravity adds about g × ‰ / 1000 (slows uphill, speeds up downhill).
+  function accel(lever, v, grade = 0) {
     const kmh = v * 3.6;
     let a = 0;
     if (lever > 0) a = lever * 0.17 * (kmh < 40 ? 1 : 40 / kmh);
     else if (lever === -9) a = -1.4;
     else if (lever < 0) a = lever * 0.13;
     a -= 0.02 + 0.00003 * v * v; // rolling + air resistance
+    a -= 9.8 * grade / 1000;
     return a;
   }
 
@@ -55,8 +80,10 @@
   function reset() {
     g = {
       state: 'title', // title | ready | running | arrived | end
+      mode: g ? g.mode : 'local', // local | express (kept when playing again)
+      passed: [],                 // stations passed without stopping (Express)
       pos: 0, v: 0, lever: -8,
-      seg: 1,                     // index of the station we're heading to
+      seg: 1,                     // index of the station we're heading to (set by setMode)
       clock: 8 * 3600,            // game clock (s)
       sched: 0,                   // scheduled arrival
       score: 0, stationScore: 0, overspeedPen: 0, overTimer: 0, cats: 0,
@@ -65,10 +92,13 @@
     };
   }
   reset();
+  setMode('local');
 
+  function setMode(m) { g.mode = m; LIMITS = m === 'express' ? EXPRESS_LIMITS : LOCAL_LIMITS; g.seg = nextStop(0); }
+  function nextStop(i) { do i++; while (i < STATIONS.length - 1 && !stopsAt(i, g.mode)); return i; }
   function startSegment() {
     const st = STATIONS[g.seg];
-    g.sched = g.clock + st.run;
+    g.sched = g.clock + (g.mode === 'express' ? st.exp : st.run);
     g.overspeedPen = 0; g.failed = false; g.cats = 0;
     g.state = 'running';
     flash('Depart for ' + st.name + '!');
@@ -97,12 +127,18 @@
     if (g.msgT > 0) g.msgT -= dt;
     if (g.state !== 'running') return;
     g.clock += dt;
-    const a = accel(g.lever, g.v);
+    const a = accel(g.lever, g.v, gradeAt(g.pos));
     g.v = Math.max(0, g.v + a * dt);
     if (g.v === 0 && g.lever <= 0) g.v = 0;
     const before = g.pos;
     g.pos += g.v * dt;
     g.cats += catsBetween(before, g.pos).length;
+    // Passing a station without stopping (Express): no judging, just a note.
+    for (let i = 1; i < g.seg; i++) {
+      if (!g.passed.includes(i) && before < STATIONS[i].pos && g.pos >= STATIONS[i].pos) {
+        g.passed.push(i); flash('Passing ' + STATIONS[i].name + ' · Express', 2);
+      }
+    }
 
     // Speed limit
     const kmh = g.v * 3.6, lim = limitAt(g.pos);
@@ -265,9 +301,14 @@
         if (g.seg >= STATIONS.length - 1) { g.state = 'end'; }
         else {
           g.clock = Math.max(g.clock + 15, g.sched + DWELL);
-          g.seg++; g.lever = -8; startSegment();
+          g.seg = nextStop(g.seg); g.lever = -8; startSegment();
         }
-      } else if (g.state === 'end') reset();
+      } else if (g.state === 'end') { reset(); setMode(g.mode); }
+      return;
+    }
+    if (g.state === 'title') { // ▲/▼ (or L/E) pick the mode on the title screen
+      if (a === 'power' || a === 'brake') setMode(MODES[(MODES.indexOf(g.mode) + 1) % MODES.length]);
+      else if (a === 'local' || a === 'express') setMode(a);
       return;
     }
     if (g.state !== 'running') return;
@@ -276,7 +317,7 @@
     else if (a === 'neutral') g.lever = 0;
     else if (a === 'eb') g.lever = -9;
   }
-  const KEYS = { ArrowUp: 'power', KeyW: 'power', ArrowDown: 'brake', KeyS: 'brake', KeyN: 'neutral', Space: 'eb', Enter: 'enter', NumpadEnter: 'enter', KeyM: 'mute', KeyP: 'pause', Escape: 'pause' };
+  const KEYS = { ArrowUp: 'power', KeyW: 'power', ArrowDown: 'brake', KeyS: 'brake', KeyN: 'neutral', Space: 'eb', Enter: 'enter', NumpadEnter: 'enter', KeyM: 'mute', KeyP: 'pause', Escape: 'pause', KeyL: 'local', KeyE: 'express' };
   // Browsers only allow audio after a user gesture, so start it on the first key or tap.
   addEventListener('keydown', () => sound.start());
   addEventListener('pointerdown', () => sound.start());
@@ -560,7 +601,7 @@
       ctx.beginPath(); ctx.moveTo(b.x + sx, top); ctx.lineTo(b.x + dir * w * 0.8, y - 0.1 * s); ctx.lineTo(b.x + dir * w * 0.25, y - 0.2 * s); ctx.fill();
     }
   }
-  function house(b, s, k, now, roof, wall = '#f1e8d4', w = 6, h = 3, washing = false) {
+  function house(b, s, k, now, roof, wall = '#f1e8d4', w = 6, h = 3, washing = false, side = 1) {
     const x0 = b.x - (w / 2) * s, y0 = b.y - h * s;
     ctx.fillStyle = rgb(lit(wall)); ctx.fillRect(x0, y0, w * s, h * s);
     ctx.fillStyle = rgb(lit('#5a4434'));
@@ -571,8 +612,8 @@
     ctx.fillStyle = rgb(lit(roof)); ctx.beginPath();
     ctx.moveTo(x0 - 0.9 * s, y0 + 0.2 * s); ctx.lineTo(x0 + (w + 0.9) * s, y0 + 0.2 * s); ctx.lineTo(x0 + (w - 1.4) * s, y0 - 2.3 * s); ctx.lineTo(x0 + 1.4 * s, y0 - 2.3 * s); ctx.fill();
     ctx.fillStyle = rgb(mix(lit(roof), [255, 240, 210], 0.3)); ctx.fillRect(x0 + 1.4 * s, y0 - 2.3 * s, (w - 2.8) * s, 0.3 * s);
-    if (washing) { // a washing line beside the house, clothes swaying
-      const lx = x0 + (w + 1.5) * s, ly = b.y - 2 * s;
+    if (washing) { // a washing line on the far side of the house from the track, clothes swaying
+      const lx = side < 0 ? x0 - 5.5 * s : x0 + (w + 1.5) * s, ly = b.y - 2 * s;
       ctx.strokeStyle = rgb(lit('#6a5240')); ctx.lineWidth = Math.max(1, 0.1 * s); ctx.beginPath();
       ctx.moveTo(lx, b.y); ctx.lineTo(lx, ly - 0.3 * s); ctx.moveTo(lx + 4 * s, b.y); ctx.lineTo(lx + 4 * s, ly - 0.3 * s);
       ctx.moveTo(lx, ly); ctx.quadraticCurveTo(lx + 2 * s, ly + 0.3 * s, lx + 4 * s, ly); ctx.stroke();
@@ -584,15 +625,15 @@
     }
   }
   const LEAF = { paddies: ['#3f7a3a', '#5a9a48', '#9cc86a'], forest: ['#2c5e35', '#3f7f45', '#7fb860'], seaside: ['#3c7444', '#579a52', '#a2cc72'] };
-  function drawProp(name, b, k, now) {
+  function drawProp(name, b, k, now, side) {
     const s = b.s;
     if (name === 'paddies') {
-      if (k < 0.08 || (k > 0.3 && k < 0.36)) house(b, s, k, now, k < 0.08 ? '#7a6a4a' : '#56677a', '#f1e8d4', 6, 3, true);
+      if (k < 0.08 || (k > 0.3 && k < 0.36)) house(b, s, k, now, k < 0.08 ? '#7a6a4a' : '#56677a', '#f1e8d4', 6, 3, true, side);
       else roundTree(b, s, k, now, LEAF.paddies, 1.8 + k * 2, 2 + k * 2);
     } else if (name === 'forest') {
       if (k < 0.15 || (k > 0.3 && k < 0.42)) cedar(b, s, k, now);
       else roundTree(b, s, k, now, LEAF.forest, 2.6, 3.4 + k * 2);
-    } else if (k < 0.16) house(b, s, k, now, ['#c0504a', '#3f6fa0', '#d08a3a'][Math.floor(k * 18) % 3], '#f6f2ea', 5, 3, k < 0.06);
+    } else if (k < 0.16) house(b, s, k, now, ['#c0504a', '#3f6fa0', '#d08a3a'][Math.floor(k * 18) % 3], '#f6f2ea', 5, 3, k < 0.06, side);
     else roundTree(b, s, k, now, LEAF.seaside, 1.6, 2 + k * 1.5);
   }
 
@@ -696,7 +737,7 @@
     for (let s = Math.ceil(a / CAT_STEP) * CAT_STEP; s < b; s += CAT_STEP) { const c = catAt(s); if (c) out.push(c); }
     return out;
   }
-  const stats = { catsDrawn: 0, frames: 0, trainDrawn: 0, insets: {}, lastInsets: [], trees: 0, birds: 0, fireflies: 0 }; // render counters for automated tests
+  const stats = { catsDrawn: 0, frames: 0, trainDrawn: 0, gradePostsDrawn: 0, passDrawn: 0, insets: {}, lastInsets: [], trees: 0, birds: 0, fireflies: 0 }; // render counters for automated tests
   function drawCat(c, p) {
     const s = p.s * 1.4; // cats drawn a bit larger than life so you can spot them
     if (s < 1.2) return;
@@ -786,7 +827,8 @@
     for (let s = Math.ceil(plo / 23) * 23; s < phi; s += 23) {
       const h = hash(s);
       if (h < 0.6) {
-        const x = (h < 0.3 ? -1 : 1) * (7 + h * 30);
+        let x = (h < 0.3 ? -1 : 1) * (7 + h * 30);
+        if (x < 0 && x > -16 && onPlatform(s)) x -= 10; // keep houses and trees off the platform
         if (scene.blend < 1) objs.push({ z: zOf(s), t: 'prop', x, k: h, sc: scene.prev, a: 1 - scene.blend });
         objs.push({ z: zOf(s), t: 'prop', x, k: h, sc: scene.cur, a: scene.blend });
       }
@@ -809,13 +851,14 @@
       }
     }
     { const [lo, hi] = span(120); for (const c of catsBetween(lo, hi)) objs.push({ z: zOf(c.s), t: 'cat', c }); }
+    for (let i = 1; i < GRADES.length; i++) { const z = zOf(GRADES[i].at); if (z > 0 && z < ZMAX) objs.push({ z, t: 'grade', pm: GRADES[i].pm }); }
     for (const Lm of LIMITS) { const z = zOf(Lm.at - 150); if (z > 0 && z < ZMAX) objs.push({ z, t: 'limit', lim: Lm.lim }); }
     for (let i = 0; i < STATIONS.length; i++) {
       const S = STATIONS[i];
       const za = zOf(S.pos - 160), zb = zOf(S.pos + 30), z0 = Math.min(za, zb), z1 = Math.max(za, zb);
       // sorted by its far end so the train, cats and signs on or beside it are drawn over it
-      if (z1 > ZMIN && z0 < ZMAX) objs.push({ z: Math.max(z0, ZMIN), z1, key: Math.min(z1, ZMAX), t: 'platform', S, s0: S.pos - 160 });
-      const zs = zOf(S.pos); if (zs > ZMIN && zs < ZMAX) objs.push({ z: zs, t: 'stop' });
+      if (z1 > ZMIN && z0 < ZMAX) objs.push({ z: Math.max(z0, ZMIN), z1, key: Math.min(z1, ZMAX), t: 'platform', S });
+      const zs = zOf(S.pos); if (zs > ZMIN && zs < ZMAX) objs.push({ z: zs, t: stopsAt(i, g.mode) ? 'stop' : 'pass' });
       const zn = zOf(S.pos - 70); if (zn > ZMIN && zn < ZMAX) objs.push({ z: zn, t: 'name', S });
     }
     if (cam.train) { // seen from outside: add our own train (front at g.pos, TRAIN_LEN long)
@@ -832,7 +875,7 @@
         ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(t.x, t.y); ctx.lineTo(arm.x, arm.y); ctx.stroke();
       } else if (o.t === 'prop') {
         if (o.a <= 0.01 || (o.sc === 'seaside' && o.x > 9)) continue;
-        ctx.globalAlpha = o.a; drawProp(o.sc, project(o.x, 0, o.z), o.k, now); ctx.globalAlpha = 1;
+        ctx.globalAlpha = o.a; drawProp(o.sc, project(o.x, 0, o.z), o.k, now, Math.sign(o.x)); ctx.globalAlpha = 1;
       } else if (o.t === 'tuft') {
         drawTuft(project(o.x, 0, o.z), o.k, now);
       } else if (o.t === 'fly') {
@@ -847,6 +890,20 @@
         ctx.beginPath(); ctx.arc(t.x, t.y, 0.6 * s, 0, 7); ctx.fill(); ctx.stroke();
         ctx.fillStyle = '#2a2420'; ctx.font = `bold ${Math.max(6, 0.6 * s)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(o.lim, t.x, t.y);
+      } else if (o.t === 'grade') {
+        stats.gradePostsDrawn++;
+        // gradient post: a short white board on the left, an arm showing up / down / level and the ‰ value
+        const b = project(-2.6, 0, o.z), t = project(-2.6, 1.8, o.z), s = b.s;
+        ctx.strokeStyle = '#333'; ctx.lineWidth = Math.max(1, 0.08 * s);
+        ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(t.x, t.y); ctx.stroke();
+        const bw = 1.4 * s, bh = 0.9 * s;
+        ctx.fillStyle = '#f4f1e8'; ctx.fillRect(t.x - bw / 2, t.y - bh, bw, bh);
+        ctx.strokeStyle = '#222'; ctx.lineWidth = Math.max(1, 0.06 * s); ctx.strokeRect(t.x - bw / 2, t.y - bh, bw, bh);
+        const dy = o.pm > 0 ? -0.18 : o.pm < 0 ? 0.18 : 0;
+        ctx.lineWidth = Math.max(1, 0.08 * s);
+        ctx.beginPath(); ctx.moveTo(t.x - bw / 2 + 0.1 * s, t.y - bh * 0.72 - dy * s); ctx.lineTo(t.x + bw / 2 - 0.1 * s, t.y - bh * 0.72 + dy * s); ctx.stroke();
+        ctx.fillStyle = '#111'; ctx.font = `bold ${Math.max(5, 0.4 * s)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(o.pm === 0 ? 'L' : String(Math.abs(o.pm)), t.x, t.y - bh * 0.3);
       } else if (o.t === 'platform') {
         drawPlatform(o, ZMAX, now);
       } else if (o.t === 'stop') {
@@ -860,6 +917,14 @@
         const m1 = project(-1.8, 0.02, o.z), m2 = project(1.8, 0.02, o.z);
         ctx.strokeStyle = '#f2c200'; ctx.lineWidth = Math.max(1, 0.2 * s);
         ctx.beginPath(); ctx.moveTo(m1.x, m1.y); ctx.lineTo(m2.x, m2.y); ctx.stroke();
+      } else if (o.t === 'pass') { // Express passes this station: green PASS board, no stop mark
+        const b = project(-2.6, 1.1, o.z), t = project(-2.6, 2.8, o.z), s = b.s;
+        ctx.strokeStyle = '#333'; ctx.lineWidth = Math.max(1, 0.08 * s);
+        ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(t.x, t.y); ctx.stroke();
+        ctx.fillStyle = '#2ea043'; ctx.fillRect(t.x - 0.6 * s, t.y - 0.4 * s, 1.2 * s, 0.8 * s);
+        ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.max(5, 0.35 * s)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('PASS', t.x, t.y);
+        stats.passDrawn++;
       } else if (o.t === 'train') {
         drawTrain(ZMIN);
       } else if (o.t === 'name') { // wooden station name board
@@ -1054,6 +1119,12 @@
     ctx.fillStyle = '#fff'; ctx.font = 'bold 22px sans-serif';
     ctx.fillText(st.name, ix, y0 + 48);
     ctx.fillText(lim + ' km/h', ix, y0 + 94);
+    // current gradient, beside the speed limit
+    const pm = gradeAt(g.pos);
+    ctx.fillStyle = '#9da7b3'; ctx.font = '13px sans-serif'; ctx.fillText('GRADIENT', ix + 130, y0 + 70);
+    ctx.fillStyle = pm > 0 ? '#ffb86b' : pm < 0 ? '#79c0ff' : '#fff'; ctx.font = 'bold 20px sans-serif';
+    ctx.fillText(pm > 0 ? `▲ ${pm}‰` : pm < 0 ? `▼ ${-pm}‰` : 'Level', ix + 130, y0 + 94);
+    ctx.fillStyle = '#fff';
     const nl = LIMITS.find((L) => L.at > g.pos);
     ctx.font = 'bold 16px sans-serif';
     ctx.fillText(nl ? `${nl.lim} km/h in ${Math.max(0, nl.at - g.pos).toFixed(0)} m` : '—', ix, y0 + 138);
@@ -1117,12 +1188,14 @@
       ctx.fillText(g.msg, W / 2, 82); ctx.globalAlpha = 1;
     }
     if (g.state === 'title') {
+      const ex = g.mode === 'express';
       panel([
-        'Drive the Aozora Line through ' + (STATIONS.length - 1) + ' stations.',
+        { t: (ex ? '   Local      ▶ EXPRESS ◀' : '▶ LOCAL ◀      Express   '), c: ex ? '#ff9f5a' : '#7ee787' },
+        ex ? `Express: ${stopCount('express')} stops (passes ${stopCount('local') - stopCount('express')}), faster limits, tight times.`
+          : `Local: stops at all ${stopCount('local')} stations.`,
         'Obey speed limits, stop on the yellow STOP mark, arrive on time.',
         '↑/W: more power   ↓/S: more brake   N: neutral   Space: EB',
-        'Tip: brake early, then ease off to B1–B3 for a smooth stop.',
-        { t: 'Press Enter (or tap) to start', c: '#ffd33d' },
+        { t: '▲/▼ (or L / E) choose mode · Enter or tap to start', c: '#ffd33d' },
       ], 'AOZORA LINE · Train Driver');
     } else if (g.state === 'arrived') {
       const r = g.lastResult;
@@ -1137,13 +1210,13 @@
       lines.push({ t: g.seg >= STATIONS.length - 1 ? 'Press Enter for final results' : 'Press Enter to depart', c: '#ffd33d' });
       panel(lines, 'Arrived at ' + r.name);
     } else if (g.state === 'end') {
-      const max = (STATIONS.length - 1) * 2200;
+      const max = stopCount(g.mode) * 2200;
       const pct = g.score / max;
       const rank = pct > 0.85 ? 'S' : pct > 0.7 ? 'A' : pct > 0.5 ? 'B' : pct > 0.3 ? 'C' : 'D';
       const lines = g.results.map((r) => `${r.name}: ${r.failed ? 'overrun' : r.total + ' pts'}`);
       lines.push({ t: `Total ${g.score}  ·  Rank ${rank}`, c: '#7ee787' });
       lines.push({ t: 'Press Enter to play again', c: '#ffd33d' });
-      panel(lines, 'End of the line!');
+      panel(lines, `End of the line! · ${MODE_NAMES[g.mode]}`);
     }
     if (g.paused) {
       panel([
@@ -1170,7 +1243,7 @@
   }
 
   // Exposed for automated testing: set paused = true, then drive the game with step(dt) and render().
-  const hook = { get state() { return g; }, scene, stats, act, step, render, paused: false, setPaused, sound, STATIONS, LIMITS, accel, limitAt, catsBetween, lightAt };
+  const hook = { get state() { return g; }, scene, stats, act, step, render, paused: false, setPaused, sound, STATIONS, get LIMITS() { return LIMITS; }, GRADES, accel, limitAt, gradeAt, catsBetween, lightAt, stopsAt };
   window.__train = hook;
   requestAnimationFrame(frame);
 })();

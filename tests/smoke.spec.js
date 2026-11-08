@@ -20,11 +20,12 @@ test.afterEach(() => {
 // Runs inside the page. A simple automatic driver: holds a bit under the line speed, slows for
 // lower limits ahead, and brakes on a curve that ends on the STOP mark. Moves the lever one notch
 // per step through act(), like a player would. Returns per-station results.
-function autopilot({ overrunAt = -1, dt = 0.05 } = {}) {
+function autopilot({ overrunAt = -1, dt = 0.05, mode = 'local' } = {}) {
   const T = window.__train;
   T.paused = true;
   const g = () => T.state;
   const DECEL = 0.45; // planned braking (m/s²), comfortably under B8
+  T.act(mode);    // pick Local or Express on the title screen
   T.act('enter'); // title -> running
   for (let guard = 0; guard < 400000 && g().state !== 'end'; guard++) {
     const s = g();
@@ -82,6 +83,40 @@ test('train physics and speed limits behave', async ({ page }) => {
   expect(r.lim0).toBe(45);
   expect(r.lim300).toBe(85);
   expect(r.limEnd).toBe(70);
+});
+
+test('gradients: coasting is slower uphill and faster downhill; stations are level', async ({ page }) => {
+  const r = await page.evaluate(() => {
+    const T = window.__train;
+    // Coast in neutral for 20 s from 60 km/h on a constant gradient.
+    const coast = (pm) => { let v = 60 / 3.6; for (let i = 0; i < 400; i++) v = Math.max(0, v + T.accel(0, v, pm) * 0.05); return v; };
+    return {
+      flat: coast(0), up: coast(25), down: coast(-25),
+      hasUp: T.GRADES.some((x) => x.pm > 0), hasDown: T.GRADES.some((x) => x.pm < 0),
+      stationGrades: T.STATIONS.map((s) => [T.gradeAt(s.pos - 200), T.gradeAt(s.pos), T.gradeAt(s.pos + 30)]),
+      gUp: T.accel(0, 10, 0) - T.accel(0, 10, 10),
+    };
+  });
+  expect(r.up).toBeLessThan(r.flat);
+  expect(r.down).toBeGreaterThan(r.flat);
+  expect(r.gUp).toBeCloseTo(0.098, 3); // about g × ‰ / 1000
+  expect(r.hasUp && r.hasDown).toBe(true);
+  for (const g of r.stationGrades) expect(g).toEqual([0, 0, 0]);
+});
+
+test('gradient posts and the dashboard gradient render', async ({ page }) => {
+  const shown = await page.evaluate(() => {
+    const T = window.__train;
+    T.paused = true;
+    T.act('enter');
+    const post = T.GRADES.find((x) => x.pm > 0);
+    T.state.pos = post.at - 100; // the post marking the climb is 100 m ahead
+    const before = T.stats.gradePostsDrawn;
+    T.render();
+    return { posts: T.stats.gradePostsDrawn - before, here: T.gradeAt(post.at + 1) };
+  });
+  expect(shown.posts).toBeGreaterThan(0);
+  expect(shown.here).toBeGreaterThan(0);
 });
 
 test('keyboard controls move the lever', async ({ page }) => {
@@ -217,6 +252,61 @@ test('P / Esc pause the run, freezing the train and clock; hiding the tab pauses
     document.dispatchEvent(new Event('visibilitychange'));
   });
   expect((await read()).paused).toBe(true);
+});
+
+test('Express mode passes about half the stops with a tighter timetable and higher limits', async ({ page }) => {
+  // The mode is picked on the title screen with the keyboard (▲/▼ toggle, L/E pick).
+  const mode = () => page.evaluate(() => window.__train.state.mode);
+  expect(await mode()).toBe('local');
+  await page.keyboard.press('ArrowUp');
+  expect(await mode()).toBe('express');
+  await page.keyboard.press('KeyL');
+  expect(await mode()).toBe('local');
+  await page.keyboard.press('KeyE');
+  expect(await mode()).toBe('express');
+  // ...and by touch, with the on-screen ▼ button.
+  await page.locator('#touch button[data-act="brake"]').click();
+  expect(await mode()).toBe('local');
+  await page.locator('#touch button[data-act="power"]').click();
+  expect(await mode()).toBe('express');
+
+  const lim = await page.evaluate(() => ({ express: window.__train.limitAt(300), passed: window.__train.STATIONS.filter((_, i) => i > 0 && !window.__train.stopsAt(i, 'express')).map((s) => s.name) }));
+  expect(lim.express).toBe(100); // 85 on Local
+  expect(lim.passed).toEqual(['Kozakura', 'Nanohana', 'Hotarubashi', 'Yuzuhara']);
+
+  // Passed stations show a PASS board instead of a STOP mark.
+  const pass = await page.evaluate(() => {
+    const T = window.__train;
+    T.paused = true;
+    const before = T.stats.passDrawn;
+    T.state.pos = T.STATIONS[1].pos - 120;
+    T.render();
+    T.state.pos = 0;
+    return T.stats.passDrawn - before;
+  });
+  expect(pass).toBeGreaterThan(0);
+
+  const run = await page.evaluate(autopilot, { mode: 'express' });
+  expect(run.state).toBe('end');
+  expect(run.results.map((r) => r.name)).toEqual(['Kawabe', 'Momijidai', 'Shiokaze', 'Tsukimino']);
+  for (const r of run.results) {
+    expect(r.failed, `${r.name} overrun`).toBe(false);
+    expect(Math.abs(r.d), `${r.name} stop error (m)`).toBeLessThan(5);
+    expect(r.total, `${r.name} total`).toBeGreaterThan(0);
+  }
+  expect(await page.evaluate(() => window.__train.state.passed.length)).toBe(4);
+  // The end screen names the mode.
+  await page.evaluate(() => window.__train.render());
+  // Tighter timetable: each Express run is much shorter than the Local runs it replaces
+  // (including their station dwells), yet the autopilot still arrives on time.
+  const tt = await page.evaluate(() => {
+    const S = window.__train.STATIONS, out = [];
+    let prev = 0;
+    S.forEach((s, i) => { if (i > 0 && s.exp !== undefined) { let local = 0; for (let k = prev + 1; k <= i; k++) local += S[k].run + (k < i ? 30 : 0); out.push([s.exp, local]); prev = i; } });
+    return out;
+  });
+  for (const [exp, local] of tt) expect(exp).toBeLessThan(local * 0.75);
+  for (const r of run.results) expect(r.timePts, `${r.name} on time`).toBeGreaterThan(0);
 });
 
 test('painted pastoral scenes with light that shifts from morning to evening', async ({ page }) => {
