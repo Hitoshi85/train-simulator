@@ -17,8 +17,9 @@ GitHub Pages deploys `index.html`, `game.js`, `style.css` (and `assets/` if pres
 6. Add or extend a test in `tests/` for new behaviour whenever it can be checked headlessly.
 7. If `game.js` or `style.css` changed, bump `?v=N` on both asset URLs in `index.html` so
    browsers load the new version.
-8. Open the PR with a screenshot image in its description, wait for CI, fix failures until green.
-   Never skip or weaken a test to get green.
+8. Open the PR with a screenshot of the game that highlights the new feature (commit it under
+   `docs/screens/` and embed it as an image in the PR body; the merge queue looks for it).
+   Wait for CI, fix failures until green. Never skip or weaken a test to get green.
 9. The merge queue (`.github/workflows/merge-queue.yml`) merges small green PRs (800 changed lines or
    fewer) that have a screenshot in the description, oldest first, rebasing each onto `main` and re-running CI before it merges. It
    may rebase your branch: pull before pushing again. Label a PR `hold` to keep it out. Bigger PRs and PRs that
@@ -34,8 +35,8 @@ GitHub Pages deploys `index.html`, `game.js`, `style.css` (and `assets/` if pres
 
 `game.js` exposes `window.__train` for tests: `state` (live game state), `act(action)`,
 `step(dt)` (advance the simulation; does nothing while the player has paused), `setPaused(bool)` (player pause, also `state.paused`), `render()` (draw one frame), `paused` (stop the real-time loop),
-`stats` (`frames`, `catsDrawn`, `trainDrawn`, `gradePostsDrawn`, `insets` (count per camera id: front, rear, platform),
-`lastInsets` (ids of insets drawn in the last frame)), `sound` (`muted`, `started`, `toggle()`), plus `STATIONS`, `LIMITS`, `GRADES`, `accel(lever, v, grade‰)`, `limitAt`, `gradeAt`, `catsBetween`.
+`stats` (`frames`, `catsDrawn`, `trainDrawn`, `gradePostsDrawn`, `trees`, `birds`, `fireflies`, `insets` (count per camera id: front, rear, platform),
+`lastInsets` (ids of insets drawn in the last frame)), `sound` (`muted`, `started`, `toggle()`), plus `STATIONS`, `LIMITS`, `GRADES`, `accel(lever, v, grade‰)`, `limitAt`, `gradeAt`, `catsBetween`, `lightAt(pos)` (time-of-day light, `.phase` morning, midday or evening).
 Keep it working when refactoring; add to it when a new feature needs checking.
 `tests/smoke.spec.js` has an `autopilot()` that drives the full line through `act()`.
 
