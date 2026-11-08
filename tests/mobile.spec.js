@@ -29,7 +29,7 @@ for (const [name, viewport] of [['portrait', { width: 390, height: 844 }], ['lan
       const inView = (b) => b.top >= 0 && b.left >= 0 && b.bottom <= r.vh && b.right <= r.vw;
       expect(inView(r.canvas), 'canvas in view').toBe(true);
       expect(r.canvas.height, 'canvas is a usable size').toBeGreaterThan(200);
-      expect(r.buttons).toHaveLength(7);
+      expect(r.buttons).toHaveLength(8);
       for (const b of r.buttons) {
         expect(inView(b), `${b.act} button in view`).toBe(true);
         expect(b.height, `${b.act} button at least 44 px tall`).toBeGreaterThanOrEqual(44);
@@ -55,3 +55,28 @@ for (const [name, viewport] of [['portrait', { width: 390, height: 844 }], ['lan
     });
   });
 }
+
+// Feedback button: pauses the run and opens a prefilled GitHub issue (feedback form) with the game context.
+test.describe('feedback on a phone', () => {
+  test.use({ ...iPhone, viewport: { width: 390, height: 844 } });
+  test('tapping Feedback pauses and opens a prefilled feedback issue', async ({ page }) => {
+    await page.goto('/index.html');
+    await page.waitForFunction(() => window.__train && window.__train.stats.frames > 2);
+    await page.evaluate(() => { window.__opened = []; window.open = (u) => { window.__opened.push(u); return null; }; });
+    await page.tap('#touch [data-act="enter"]');
+    await expect.poll(() => page.evaluate(() => window.__train.state.state)).toBe('running');
+    await page.tap('#feedback');
+    expect(await page.evaluate(() => window.__train.state.paused)).toBe(true);
+    const opened = await page.evaluate(() => window.__opened);
+    expect(opened).toHaveLength(1);
+    const u = new URL(opened[0]);
+    expect(u.origin + u.pathname).toBe('https://github.com/hitoshi85/train-simulator/issues/new');
+    expect(u.searchParams.get('template')).toBe('feedback.yml');
+    const ctx = u.searchParams.get('context');
+    expect(ctx).toMatch(/Game version: v\d+/);
+    expect(ctx).toContain('Mode: Local');
+    expect(ctx).toContain('heading for Kugenuma');
+    expect(ctx).toMatch(/Time of day: (morning|midday|evening|night)/);
+    expect(u.searchParams.get('device')).toBeTruthy();
+  });
+});
