@@ -27,7 +27,8 @@ test.describe('live site', () => {
   });
 
   // The live copy is phone friendly too: on an iPhone-sized screen it fits without scrolling,
-  // all 7 touch buttons are on screen and at least 44 px tall.
+  // every touch button is on screen and at least 44 px tall. Prod can be an older release than the
+  // repo, so this does not pin the button count (tests/mobile.spec.js does that for the current code).
   test.describe('on a phone', () => {
     const iPhone = { ...devices['iPhone 13'] };
     delete iPhone.defaultBrowserType;
@@ -43,7 +44,7 @@ test.describe('live site', () => {
       }));
       expect(r.scrollH).toBeLessThanOrEqual(r.vh);
       expect(r.scrollW).toBeLessThanOrEqual(r.vw);
-      expect(r.buttons).toHaveLength(7);
+      expect(r.buttons.length).toBeGreaterThanOrEqual(7);
       for (const b of r.buttons) {
         expect(b.top >= 0 && b.left >= 0 && b.bottom <= r.vh && b.right <= r.vw).toBe(true);
         expect(b.height).toBeGreaterThanOrEqual(44);
