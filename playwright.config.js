@@ -16,7 +16,8 @@ module.exports = defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: `node tests/serve.js ${PORT}`,
+    // Also builds the dev/prod Pages layout from the working tree into _site-test/ for the site tests.
+    command: `bash .github/scripts/build-site.sh . . _site-test prod-test && node tests/serve.js ${PORT}`,
     url: `http://127.0.0.1:${PORT}/index.html`,
     reuseExistingServer: !process.env.CI,
   },

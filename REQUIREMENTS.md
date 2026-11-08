@@ -4,8 +4,9 @@ The single, always-current record of what the game must do, what has shipped, wh
 (Hitoshi) has asked for, and what is next. Every change to the game, and every piece of feedback,
 is recorded here in the same PR or thread that handles it (see the rule in [CLAUDE.md](CLAUDE.md)).
 
-- **Play (desktop or phone):** https://hitoshi85.github.io/train-simulator/ (add `?v=<short commit>`
-  on a phone to skip a cached copy)
+- **Play prod (stable):** https://hitoshi85.github.io/train-simulator/
+- **Play dev (latest main):** https://hitoshi85.github.io/train-simulator/dev/ (add `?v=<short commit>`
+  on a phone to skip a cached copy; the current links with that suffix are always in [README.md](README.md))
 - **Backlog:** [open issues](https://github.com/Hitoshi85/train-simulator/issues)
 - **Last updated:** 2026-11-08
 
@@ -49,7 +50,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | W2 | Before changing the game, ask clarifying questions **one at a time**, each with 3 options and a recommended one. | In place |
 | W3 | Agentic loop: tasks are GitHub issues labelled `task`; the owner approves with `ready`; one thread per issue opens a small PR; CI (ESLint + headless autopilot smoke test) must be green. See [docs/WORKFLOW.md](docs/WORKFLOW.md). | In place |
 | W4 | PRs merge on their own through the merge queue when every check is green on top of `main` and the description has a screenshot, for small PRs only: 800 changed lines or fewer, lock files and images not counted (Hitoshi's choice). Bigger PRs wait for "m" unless labelled `automerge`. A `hold` label keeps a PR out; PRs that change `.github/workflows/` still wait for the owner's "m". Replaces "the owner merges". | Done (#22) |
-| W5 | Merges to `main` deploy to GitHub Pages through the tested workflow. | In place |
+| W5 | Merges to `main` deploy to GitHub Pages through the tested workflow, to **dev** only (`/train-simulator/dev/`). | In place (dev/prod split in this PR) |
 | W6 | After every shipped change, share the latest mobile link with a cache-busting suffix: `https://hitoshi85.github.io/train-simulator/?v=<short commit>`. Since #22 the deploy workflow checks the live site first (`version.json` shows the new commit and the game starts) and comments the link on the merged PR. | In place (repo rule #13; live check in #22) |
 | W7 | Keep all requirements and feedback in this file, updated with every change and every piece of feedback. | In place |
 | W8 | Show results (e.g. test runs) in simple tables when asked. | Preference |
@@ -59,12 +60,15 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | W12 | Automatic phone and speed checks on every PR: CI takes phone screenshots (portrait 390×844 and landscape 844×390, title and mid-run; artifact `phone-screenshots`) and fails a PR if the median time to draw one frame at phone size is over 16 ms (60 fps). Frame times appear in the CI job summary. | In place (#21) |
 | W13 | PR review inside the project, no separate setup or API key: a Claude "PR reviewer" thread reviews only the diff of each PR and posts one comment with a `project-review: PASS/BLOCK <sha>` verdict. The merge queue waits for a PASS on the latest commit (a rebase by the queue carries it over); BLOCK keeps the PR out until fixed. Docs-only PRs skip the review. Hitoshi does not review small PRs. Process: `docs/REVIEW.md`. | Built (#27); the old API-key review workflow is removed |
 | W14 | Merge queue: one PR at a time, oldest first; the queue rebases it onto `main`, re-runs CI, merges when green, deploys, then moves to the next. A PR it cannot rebase gets a `queue-conflict` label and a comment. | Done (#22) |
+| W16 | Separate dev and prod web links: prod stays at `https://hitoshi85.github.io/train-simulator/` (Hitoshi's choice), dev is at `/dev/`. When Hitoshi types "Ship" in the project chat, the version dev serves is promoted to prod as a tagged GitHub release (`prod-1`, `prod-2`, …); a rollback re-points prod at an earlier release. The live check verifies both sites. README.md always shows the latest prod and dev links with a `?v=<short-sha>` suffix, updated by the deploy workflow. | Done (this PR) |
+| W17 | Both dev and prod are phone friendly and always play the latest version without a hard refresh, even from a plain bookmark with no `?v=`: the deploy loads `game.js` and `style.css` as `?v=<commit>`, marks `index.html` no-cache, and a tiny check reads `version.json` (never cached) when the page opens or is restored, reloading once onto a newer deploy. The phone layout tests run against the repo copy and both built sites, and the post-deploy check also runs a phone-size check on each live site. | Done (this PR) |
 | W15 | Hitoshi talks only in the project chat with one orchestrator; threads send questions, ready PRs and manual steps through it instead of asking in their own thread. | In place |
 
 ## 2. Shipped changes
 
 | Date | Change | PR |
 |---|---|---|
+| 2026-11-08 | Dev and prod sites: merges go to dev (`/dev/`, looks the same as prod), "Ship" promotes dev to prod as a `prod-N` release with one-click rollback, live check on both, latest links kept in README.md; both sites phone friendly and self-updating without a hard refresh | this PR |
 | 2026-11-07 | Basic browser train-driving game: notches, speed limits, 4 stops, stop-on-mark scoring | [#1](https://github.com/Hitoshi85/train-simulator/pull/1) |
 | 2026-11-07 | Lots of cats with a +2 cat bonus; random scenery every 10 s (Snowy Peaks, Red-Rock Canyon, Coastal Cliffs) | [#2](https://github.com/Hitoshi85/train-simulator/pull/2) |
 | 2026-11-07 | Cache-busting `?v=N` on game files so browsers load the latest version | [#3](https://github.com/Hitoshi85/train-simulator/pull/3) |
@@ -138,6 +142,9 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-08 | Question: how should auto-merge wait for the review? (options: queue waits for a passing review of the latest commit, every PR starts on hold, advice only). Hitoshi: "I don't want to review small PRs for dev." | Built the first option: the reviewer thread, not Hitoshi, reviews; small PRs still merge on their own (W13). |
 | 2026-11-08 | Question: what should be saved? (options: best scores and settings; plus resume a run from the last station; plus run history and lifetime totals) | Hitoshi chose best scores, settings and resume (R25). |
 | 2026-11-08 | Question: how should resuming work? (options: title offers Continue or New run; jump straight back in; small Continue button on the normal title) | Hitoshi chose Continue or New run on the title (R25). |
+| 2026-11-08 | Question: which links should dev and prod use? (options: prod keeps the current link and dev moves to /dev/, both under /prod/ and /dev/, dev keeps the current link and prod moves to /prod/) | Hitoshi chose prod at the current link, dev at /dev/ (W16). |
+| 2026-11-08 | Question: how should the dev game show it is dev? (options: small DEV tag in a corner, no marker, tags on both) | Hitoshi chose no marker: dev and prod look the same; `version.json` on each site names its commit (W16). |
+| 2026-11-08 | "Make sure that both dev and prod are mobile friendly and does not require a hard refresh to play the latest version." | Added to the dev/prod PR: commit-versioned assets, no-cache page, a version check that reloads once onto a newer deploy, and phone checks on both sites (W17). |
 
 ## 4. Open backlog
 

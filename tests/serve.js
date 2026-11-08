@@ -9,7 +9,7 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
 
 http.createServer((req, res) => {
   const url = decodeURIComponent(new URL(req.url, 'http://x').pathname);
-  const file = path.join(root, url === '/' ? 'index.html' : url);
+  const file = path.join(root, url.endsWith('/') ? url + 'index.html' : url); // folders serve their index.html, like Pages
   if (!file.startsWith(root + path.sep)) { res.writeHead(403); return res.end(); }
   fs.readFile(file, (err, data) => {
     if (err) { res.writeHead(404); return res.end('not found'); }

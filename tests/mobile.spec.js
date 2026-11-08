@@ -7,12 +7,17 @@ const { test, expect, devices } = require('@playwright/test');
 const iPhone = { ...devices['iPhone 13'] };
 delete iPhone.defaultBrowserType;
 
+// The repo copy plus both Pages copies (prod at the root, dev under /dev/) built by
+// .github/scripts/build-site.sh into _site-test/ before the tests start (see playwright.config.js).
+const SITES = [['repo', '/index.html'], ['prod', '/_site-test/index.html'], ['dev', '/_site-test/dev/index.html']];
+
+for (const [site, url] of SITES)
 for (const [name, viewport] of [['portrait', { width: 390, height: 844 }], ['landscape', { width: 844, height: 390 }]]) {
-  test.describe(`phone ${name} ${viewport.width}x${viewport.height}`, () => {
+  test.describe(`${site} phone ${name} ${viewport.width}x${viewport.height}`, () => {
     test.use({ ...iPhone, viewport });
 
     test('canvas and touch buttons fit without scrolling', async ({ page }) => {
-      await page.goto('/index.html');
+      await page.goto(url);
       await page.waitForFunction(() => window.__train && window.__train.stats.frames > 2);
       const r = await page.evaluate(() => {
         const box = (el) => { const b = el.getBoundingClientRect(); return { top: b.top, left: b.left, bottom: b.bottom, right: b.right, height: b.height }; };
@@ -38,7 +43,7 @@ for (const [name, viewport] of [['portrait', { width: 390, height: 844 }], ['lan
     });
 
     test('tapping Start, Power and Pause drives the game', async ({ page }) => {
-      await page.goto('/index.html');
+      await page.goto(url);
       await page.waitForFunction(() => window.__train && window.__train.stats.frames > 2);
       await page.tap('#touch [data-act="enter"]');
       await expect.poll(() => page.evaluate(() => window.__train.state.state)).toBe('running');

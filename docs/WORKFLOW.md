@@ -19,10 +19,20 @@
    has passed, then squash-merges it and deletes the branch. A PR with
    a failing check is skipped until fixed; one that cannot be rebased gets `queue-conflict`.
    The rules live in `.github/scripts/merge-queue.js` (tested in `tests/merge-queue.spec.js`).
-5. **Deploy and live check.** `.github/workflows/pages.yml` re-runs the checks on `main`, publishes
-   the game files plus a `version.json` with the commit SHA, then **verify-live** waits until the
-   live site serves that commit, loads the live game in a headless browser, and comments the play
-   link for mobile, `https://hitoshi85.github.io/train-simulator/?v=<short-sha>`, on the merged PR.
+5. **Deploy to dev, Ship to prod.** `.github/workflows/pages.yml` serves two copies of the game on
+   one Pages site: **prod** at `https://hitoshi85.github.io/train-simulator/` and **dev** at
+   `https://hitoshi85.github.io/train-simulator/dev/`. A merge to `main`
+   re-runs the checks and updates dev only; prod is rebuilt from the `prod` git tag. Each site has a
+   `version.json` with its commit. The build (`.github/scripts/build-site.sh`) loads `game.js` and
+   `style.css` as `?v=<commit>` and adds a tiny check that reloads the page once when `version.json`
+   shows a newer deploy, so phones get the latest version without a hard refresh. Then **verify-live** checks both live sites serve the right commit
+   and that the game starts. The **links** job then rewrites the play links in `README.md` (with
+   `?v=<short-sha>` to skip phone caches) and comments the dev link on the merged PR.
+   - **Ship:** when the owner types "Ship", Claude runs the workflow with action `ship` (Actions →
+     Deploy to GitHub Pages → Run workflow). It tags the commit dev serves as the next `prod-N`,
+     publishes a GitHub release with notes since the last one, and moves the `prod` tag.
+   - **Rollback:** run it with action `rollback` (optionally naming a `prod-N` tag; empty means the
+     release before the current one). Dev is not touched by Ship or rollback.
 6. **Feedback.** Playtest notes go in a `feedback` issue (or a chat message); Claude turns them into
    new `task` issues.
 

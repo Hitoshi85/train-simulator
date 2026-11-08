@@ -1,16 +1,31 @@
 name: Deploy to GitHub Pages
 
-# Deploys the game when main changes, but only after the smoke test passes.
+# One Pages site, two copies of the game:
+#   prod  https://hitoshi85.github.io/train-simulator/       the version last promoted with "Ship"
+#   dev   https://hitoshi85.github.io/train-simulator/dev/   the latest main
+# A push to main (or the merge queue) updates dev only; prod is rebuilt from the `prod` tag.
+# Run this workflow by hand with action "ship" to promote what dev serves to prod: it tags the
+# commit `prod-N`, publishes a GitHub release and moves the `prod` tag. Action "rollback" with a
+# `prod-N` tag points prod back at that release. Every run checks both live sites afterwards.
 # One-time setup: Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      action:
+        description: 'deploy (main to dev), ship (dev to prod) or rollback (prod to an earlier release)'
+        type: choice
+        options: [deploy, ship, rollback]
+        default: deploy
+      tag:
+        description: 'rollback only: the prod-N release to go back to (empty: the one before the current)'
+        required: false
+        default: ''
 
+# Only the deploy job gets Pages and OIDC rights; see its own permissions.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -18,6 +33,8 @@ concurrency:
 
 jobs:
   test:
+    # Ship and rollback only move already tested commits, so they skip the test run.
+    if: ${{ !inputs.action || inputs.action == 'deploy' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -33,48 +50,123 @@ jobs:
 
   deploy:
     needs: test
+    if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # prod-N tags and releases
+      pages: write
+      id-token: write
     outputs:
       page_url: ${{ steps.deployment.outputs.page_url }}
+      prod_sha: ${{ steps.plan.outputs.prod_sha }}
+      prod_tag: ${{ steps.plan.outputs.prod_tag }}
+      dev_sha: ${{ steps.plan.outputs.dev_sha }}
+      shipped: ${{ steps.plan.outputs.new_release }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      ACTION: ${{ inputs.action || 'deploy' }}
+      ROLLBACK_TAG: ${{ inputs.tag }}
     steps:
       - uses: actions/checkout@v4
-      - name: Collect the game files only
+        with:
+          fetch-depth: 0 # all commits and tags: prod and dev come from different commits
+      - id: pages
+        uses: actions/configure-pages@v5
+      - name: Decide which commit each site serves
+        id: plan
+        env:
+          SITE: ${{ steps.pages.outputs.base_url }}
         run: |
-          mkdir _site
-          cp index.html game.js style.css _site/
-          if [ -d assets ]; then cp -r assets _site/; fi
-          # Lets the post-deploy check (and anyone) see which commit is live.
-          echo "{\"sha\": \"${GITHUB_SHA}\"}" > _site/version.json
-      - uses: actions/configure-pages@v5
+          set -euo pipefail
+          current_prod=$(git rev-parse -q --verify 'refs/tags/prod^{commit}' || true)
+          last_n=$(git tag -l 'prod-*' | sed 's/^prod-//' | grep -E '^[0-9]+$' | sort -n | tail -1 || true)
+          tag_of() { git tag -l 'prod-*' --points-at "$1" | sort -t- -k2 -n | tail -1; }
+          # What dev serves right now. Ship and rollback keep dev as it is, and Ship promotes exactly
+          # that commit, so they stop rather than guess when it cannot be read.
+          dev_live() {
+            local sha
+            sha=$(curl -fsS "${SITE}/dev/version.json?t=$(date +%s)" | jq -r .sha 2>/dev/null || true)
+            if ! git cat-file -e "${sha:-none}^{commit}" 2>/dev/null; then
+              echo "::error::Could not read which commit dev serves from ${SITE}/dev/version.json (got '${sha:-nothing}'). Nothing was changed; check that dev is live, then try again." >&2
+              exit 1
+            fi
+            echo "$sha"
+          }
+          new_release=false
+          case "$ACTION" in
+            deploy)
+              dev=$GITHUB_SHA
+              if [ -n "$current_prod" ]; then prod=$current_prod; prod_tag=$(tag_of "$prod")
+              else prod=$GITHUB_SHA; prod_tag=prod-1; new_release=true; fi # first run: prod starts as today's game
+              ;;
+            ship)
+              dev=$(dev_live); prod=$dev
+              if [ "$prod" = "$current_prod" ]; then prod_tag=$(tag_of "$prod"); echo "::notice::Dev ${prod:0:7} is already prod."
+              else prod_tag="prod-$(( ${last_n:-0} + 1 ))"; new_release=true; fi
+              ;;
+            rollback)
+              dev=$(dev_live)
+              if [ -n "$ROLLBACK_TAG" ]; then prod_tag=$ROLLBACK_TAG
+              else prod_tag=$(git tag -l 'prod-*' | sed 's/^prod-//' | sort -n | awk -v cur="$(tag_of "$current_prod" | sed 's/^prod-//')" '$1 < cur' | tail -1 | sed 's/^/prod-/'); fi
+              [ -n "$prod_tag" ] || { echo "::error::There is no earlier prod release to roll back to."; exit 1; }
+              prod=$(git rev-parse -q --verify "refs/tags/${prod_tag}^{commit}") || { echo "::error::No release called '$prod_tag'."; exit 1; }
+              ;;
+            *) echo "::error::Unknown action $ACTION"; exit 1 ;;
+          esac
+          echo "Action $ACTION: prod ${prod:0:7} ($prod_tag), dev ${dev:0:7}"
+          { echo "prod_sha=$prod"; echo "prod_tag=$prod_tag"; echo "dev_sha=$dev"; echo "new_release=$new_release"
+            echo "prev_tag=$(tag_of "${current_prod:-none}" 2>/dev/null || true)"; } >> "$GITHUB_OUTPUT"
+      - name: Build both sites
+        run: .github/scripts/build-site.sh "${{ steps.plan.outputs.prod_sha }}" "${{ steps.plan.outputs.dev_sha }}" _site "${{ steps.plan.outputs.prod_tag }}"
       - uses: actions/upload-pages-artifact@v3
       - id: deployment
         uses: actions/deploy-pages@v4
+      # Tags move only after the deploy worked, so the `prod` tag always matches the live prod site.
+      - name: Tag and release prod
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROD_SHA: ${{ steps.plan.outputs.prod_sha }}
+          PROD_TAG: ${{ steps.plan.outputs.prod_tag }}
+          PREV_TAG: ${{ steps.plan.outputs.prev_tag }}
+          NEW_RELEASE: ${{ steps.plan.outputs.new_release }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if [ "$NEW_RELEASE" = true ]; then
+            git tag "$PROD_TAG" "$PROD_SHA"
+            git push origin "refs/tags/$PROD_TAG"
+            notes=(--generate-notes); [ -n "$PREV_TAG" ] && notes+=(--notes-start-tag "$PREV_TAG")
+            gh release create "$PROD_TAG" --verify-tag --title "$PROD_TAG (${PROD_SHA:0:7})" "${notes[@]}"
+          fi
+          git tag -f prod "$PROD_SHA"
+          git push -f origin refs/tags/prod
 
-  # Confirms the live site really serves this commit and the game starts, then posts the phone link.
+  # Confirms each live site really serves its commit and the game starts.
   verify-live:
     needs: deploy
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    permissions:
-      contents: read
-      pull-requests: write
-      issues: write
+    strategy:
+      fail-fast: false
+      matrix:
+        site: [prod, dev]
     env:
-      LIVE_URL: ${{ needs.deploy.outputs.page_url }}
+      LIVE_URL: ${{ needs.deploy.outputs.page_url }}${{ matrix.site == 'dev' && 'dev/' || '' }}
+      EXPECT_SHA: ${{ matrix.site == 'dev' && needs.deploy.outputs.dev_sha || needs.deploy.outputs.prod_sha }}
     steps:
       - uses: actions/checkout@v4
-      - name: Wait until the live site serves this commit
+      - name: Wait until the live ${{ matrix.site }} site serves its commit
         run: |
           for i in $(seq 1 60); do
             live=$(curl -fsS -H 'Cache-Control: no-cache' "${LIVE_URL}version.json?t=$(date +%s)" | jq -r .sha || true)
-            if [ "$live" = "$GITHUB_SHA" ]; then echo "Live site serves $GITHUB_SHA"; exit 0; fi
-            echo "Live: ${live:-none}, want $GITHUB_SHA. Retrying in 10 s ($i/60)."
+            if [ "$live" = "$EXPECT_SHA" ]; then echo "Live ${{ matrix.site }} serves $EXPECT_SHA"; exit 0; fi
+            echo "Live: ${live:-none}, want $EXPECT_SHA. Retrying in 10 s ($i/60)."
             sleep 10
           done
-          echo "::error::The live site did not switch to $GITHUB_SHA within 10 minutes."
+          echo "::error::The live ${{ matrix.site }} site did not switch to $EXPECT_SHA within 10 minutes."
           exit 1
       - uses: actions/setup-node@v4
         with:
@@ -84,13 +176,51 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Live check (the deployed game loads and runs)
         run: npx playwright test tests/live.spec.js
-      - name: Post the phone link
+
+  # Keeps the play links in README.md current and posts them on the merged PR.
+  links:
+    needs: [deploy, verify-live]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    env:
+      SITE: ${{ needs.deploy.outputs.page_url }}
+      PROD_SHA: ${{ needs.deploy.outputs.prod_sha }}
+      PROD_TAG: ${{ needs.deploy.outputs.prod_tag }}
+      DEV_SHA: ${{ needs.deploy.outputs.dev_sha }}
+      ACTION: ${{ inputs.action || 'deploy' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Update the play links in README.md
+        run: |
+          set -euo pipefail
+          prod_link="${SITE}?v=${PROD_SHA:0:7}"
+          dev_link="${SITE}dev/?v=${DEV_SHA:0:7}"
+          repo="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+          block=$(printf '%s\n' '<!-- play-links:start -->' \
+            "- **Prod** (stable, promoted with \"Ship\"): ${prod_link} ([${PROD_TAG}](${repo}/releases/tag/${PROD_TAG}))" \
+            "- **Dev** (latest main, may be unfinished): ${dev_link}" \
+            '<!-- play-links:end -->')
+          BLOCK="$block" perl -0pi -e 's/<!-- play-links:start -->.*?<!-- play-links:end -->/$ENV{BLOCK}/s' README.md
+          { echo "## Live and verified"; echo "$block" | sed '1d;$d'; } >> "$GITHUB_STEP_SUMMARY"
+          if git diff --quiet; then echo "README links already current."; exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -am "Update play links: prod ${PROD_SHA:0:7}, dev ${DEV_SHA:0:7} [skip ci]"
+          for i in 1 2 3 4; do git push origin HEAD:main && exit 0; sleep $((i * 3)); git pull --rebase origin main; done
+          exit 1
+      - name: Post the play links on the merged PR
+        if: env.ACTION == 'deploy'
         uses: actions/github-script@v7
         with:
           script: |
-            const short = context.sha.slice(0, 7);
-            const link = `${process.env.LIVE_URL}?v=${short}`;
-            await core.summary.addHeading('Live and verified').addRaw(`Play on your phone: ${link}`).write();
+            const site = process.env.SITE;
+            const dev = `${site}dev/?v=${process.env.DEV_SHA.slice(0, 7)}`;
+            const prod = `${site}?v=${process.env.PROD_SHA.slice(0, 7)}`;
             const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
               owner: context.repo.owner, repo: context.repo.repo, commit_sha: context.sha,
             });
@@ -98,6 +228,7 @@ jobs:
             if (pr) {
               await github.rest.issues.createComment({
                 owner: context.repo.owner, repo: context.repo.repo, issue_number: pr.number,
-                body: `Live and verified: the site serves \`${short}\` and the game starts.\n\nPlay on your phone: ${link}`,
+                body: `Live on **dev** and verified: the site serves \`${process.env.DEV_SHA.slice(0, 7)}\` and the game starts.\n\n` +
+                  `Play dev on your phone: ${dev}\nProd is unchanged (${process.env.PROD_TAG}): ${prod}\n\nSay "Ship" to promote this version to prod.`,
               });
             }
