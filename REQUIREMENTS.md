@@ -22,7 +22,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | R5 | Speed limits shown by the track and on the speedometer; overspeed costs points. | Done |
 | R6 | Stop-on-the-mark scoring at each station: up to 1000 for accuracy (+500 under 30 cm), up to 500 for punctuality, +200 for a smooth stop on B1–B3, 0 for overrunning the mark by 30 m. | Done |
 | R7 | Cats appear frequently: lots of cats beside the track and on platforms ("cats everywhere"). Original cats only. | Done |
-| R8 | Cat-spotting counter ("Cats spotted", top left); each cat passed is worth +2 points at the next station. | Done (rebalance planned in #5) |
+| R8 | Cat-spotting counter ("Cats spotted", top left); each cat passed is worth +2 points at the next station. | Done (rebalance #5 dropped by owner, 2026-11-08) |
 | R9 | Scenery changes every 10 seconds, picked at random with a short fade, between three dramatic scenes: Snowy Peaks (mountain), Red-Rock Canyon (desert), Coastal Cliffs (ocean). | Done |
 | R10 | Playable on a phone from a shareable web link that always shows the latest version (no stale cache). | Done (phone comfort in #10) |
 | R11 | Live camera insets in the top-right of the view, always on: FRONT CAM (outside camera ahead of the train looking back at its nose and side) and REAR CAM (from the tail looking back down the track). Rendered by the game, not real video. | Done (this PR) |
@@ -42,6 +42,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | W7 | Keep all requirements and feedback in this file, updated with every change and every piece of feedback. | In place |
 | W8 | Show results (e.g. test runs) in simple tables when asked. | Preference |
 | W9 | Use several focused subagents in parallel for independent parts of a task, keeping token use balanced (few agents, small prompts). | In place |
+| W10 | When asking for approval on backlog items, ask one item at a time with 3 options, and always include an option to remove the item from the backlog without doing it (the issue is closed as not planned). | In place |
 
 ## 2. Shipped changes
 
@@ -77,20 +78,22 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-07 | "Live front side video stream at all times", clarified as an always-on outside view of the train's front. | Implemented in this PR (FRONT CAM, R11). |
 | 2026-11-07 | New standing rule: always ask clarifying questions one by one, each with 3 options and a recommendation. | Implemented in this PR (W2, CLAUDE.md). |
 | 2026-11-07 | New standing rule: always use multiple subagents that work in parallel, but balance token usage. | Implemented in this PR (W9, CLAUDE.md). |
+| 2026-11-08 | Show the backlog and ask for approval on each item. | Reviewed one at a time. Approved: #10, #7, #9 as written; #11 changed to skip about half of the 8 stops (not one), since the line now has 9 stations. Skipped for now: #12, until the restyle lands. Removed (closed as not planned): #5, #6. |
+| 2026-11-08 | For the backlog, always include an option to remove an item without addressing it. | New standing rule W10. |
 
 ## 4. Open backlog
 
 Add the `ready` label to an issue to start it.
 
-| Issue | Task |
-|---|---|
-| [#5](https://github.com/Hitoshi85/train-simulator/issues/5) | Rebalance the cat bonus so driving skill decides the score (cats are ~40% of a stop's score today) |
-| [#6](https://github.com/Hitoshi85/train-simulator/issues/6) | Save the best score and rank in the browser |
-| [#7](https://github.com/Hitoshi85/train-simulator/issues/7) | Add pause with P / Esc and a pause button |
-| [#9](https://github.com/Hitoshi85/train-simulator/issues/9) | Add gradients that affect acceleration, with gradient posts |
-| [#10](https://github.com/Hitoshi85/train-simulator/issues/10) | Make the game comfortable to play on a phone |
-| [#11](https://github.com/Hitoshi85/train-simulator/issues/11) | Add an Express mode that skips a station |
-| [#12](https://github.com/Hitoshi85/train-simulator/issues/12) | Add an evening run with lighting and rain |
+| Issue | Task | Status |
+|---|---|---|
+| [#10](https://github.com/Hitoshi85/train-simulator/issues/10) | Make the game comfortable to play on a phone | Approved 2026-11-08 |
+| [#7](https://github.com/Hitoshi85/train-simulator/issues/7) | Add pause with P / Esc and a pause button | Approved 2026-11-08 |
+| [#9](https://github.com/Hitoshi85/train-simulator/issues/9) | Add gradients that affect acceleration, with gradient posts | Approved 2026-11-08 |
+| [#11](https://github.com/Hitoshi85/train-simulator/issues/11) | Add an Express mode that skips about half of the 8 stops | Approved with change 2026-11-08 |
+| [#12](https://github.com/Hitoshi85/train-simulator/issues/12) | Add an evening run with lighting and rain | Skipped for now (after the restyle) |
+
+Removed by the owner on 2026-11-08 (closed as not planned): [#5](https://github.com/Hitoshi85/train-simulator/issues/5) cat bonus rebalance, [#6](https://github.com/Hitoshi85/train-simulator/issues/6) save best score.
 
 ## 5. Ideas mentioned, not yet requested
 
