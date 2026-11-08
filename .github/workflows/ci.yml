@@ -25,8 +25,16 @@ jobs:
       - run: npm run lint
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-      - name: Smoke test (headless browser drives the train)
+      - name: Smoke, phone screenshot and frame-budget tests
         run: npm test
+      - name: Upload phone screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phone-screenshots
+          path: phone-screenshots/
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Upload report on failure
         if: failure()
         uses: actions/upload-artifact@v4

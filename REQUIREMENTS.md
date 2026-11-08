@@ -47,6 +47,8 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | W8 | Show results (e.g. test runs) in simple tables when asked. | Preference |
 | W9 | Use several focused subagents in parallel for independent parts of a task, keeping token use balanced (few agents, small prompts). | In place |
 | W10 | When asking for approval on backlog items, ask one item at a time with 3 options, and always include an option to remove the item from the backlog without doing it (the issue is closed as not planned). | In place |
+| W11 | Automatic phone and speed checks on every PR: CI takes phone screenshots (portrait 390×844 and landscape 844×390, title and mid-run; artifact `phone-screenshots`) and fails a PR if the median time to draw one frame at phone size is over 16 ms (60 fps). Frame times appear in the CI job summary. | In place (this PR) |
+| W12 | An automated review agent (Claude Code GitHub Action, check "Claude review") reviews every PR for bugs, posts inline and summary comments, and fails the check only for a must-fix problem. Needs a `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` repo secret; skipped (green) until one is added. | In place once the key is added (this PR) |
 
 ## 2. Shipped changes
 
@@ -62,6 +64,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | 2026-11-08 | Phone layout without scrolling in portrait and landscape, bigger touch buttons, help hidden on touch (closes #10); pause with P / Esc / button and auto-pause on tab switch (closes #7) | [#17](https://github.com/Hitoshi85/train-simulator/pull/17) |
 | 2026-11-08 | Uphill and downhill gradients (up to ±25‰) that change acceleration, gradient posts beside the track and a GRADIENT readout on the dashboard; stations are level. Closes #9 | [#18](https://github.com/Hitoshi85/train-simulator/pull/18) |
 | 2026-11-08 | Express mode: pick Local or Express on the title screen; Express passes 4 of the 8 stops, runs a tighter timetable and has higher limits on open track. Closes #11 | (this PR) |
+| 2026-11-08 | CI phone screenshots and a 16 ms frame-draw budget at phone size on every PR; Claude review agent workflow | (this PR) |
 
 ## 3. Feedback log
 
@@ -93,6 +96,8 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-08 | Hitoshi said "Merge" for the gradients PR. | Merged #18 once CI was green. |
 | 2026-11-08 | Express build after the backlog review: approved Express mode (#11) with one change, skip about half of the 8 stops instead of just one; keep the tighter timetable, higher limits and the mode choice on the title screen. | Issue #11 updated; built in this PR (R17): Express stops at Kawabe, Momijidai, Shiokaze and Tsukimino. |
 | 2026-11-08 | New shorthand: a message of only "m" means merge the PR. Hitoshi sent "M" for the Express PR. | Express PR rebased onto #17 and #18 and merged once CI was green. |
+| 2026-11-08 | Asked whether the setup is fully agentic; approved all six proposed upgrades, then dropped the daily backlog routine (item 3). | Auto-merge, merge queue and post-deploy check built in a separate PR; phone screenshots, frame budget and review agent built in this PR (W11, W12). |
+| 2026-11-08 | Hitoshi wants to talk only in the project chat (one orchestrator), not in each thread. | Threads send questions, ready PRs and manual steps through the project chat. |
 
 ## 4. Open backlog
 

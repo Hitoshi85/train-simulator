@@ -1,0 +1,85 @@
+name: Claude review
+
+# An automated reviewer reads each PR and comments on bugs before the owner sees it.
+# It fails this check only for a must-fix bug, so auto-merge waits for a fix.
+#
+# One-time setup (repo Settings -> Secrets and variables -> Actions -> New repository secret), either:
+#   CLAUDE_CODE_OAUTH_TOKEN  from `claude setup-token` (uses a Claude Pro/Max plan), or
+#   ANTHROPIC_API_KEY        from console.anthropic.com (pay per use).
+# Until one is set, the job passes and notes that the review was skipped.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number to review
+        required: true
+
+concurrency:
+  group: review-${{ github.event.pull_request.number || inputs.pr_number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  review:
+    name: Claude review
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PR: ${{ github.event.pull_request.number || inputs.pr_number }}
+      HAS_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' || secrets.ANTHROPIC_API_KEY != '' }}
+    steps:
+      - name: Skip when no key is set up yet
+        if: env.HAS_KEY != 'true'
+        run: echo "Claude review skipped, add CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY to enable it." >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/checkout@v4
+        if: env.HAS_KEY == 'true'
+        with:
+          fetch-depth: 0
+
+      - name: Review the PR
+        if: env.HAS_KEY == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ env.PR }}
+
+            You are reviewing a pull request for Aozora Line, a browser train-driving game in plain
+            HTML/CSS/JS (see CLAUDE.md). Read the diff with `gh pr diff` and the PR with `gh pr view`,
+            and read surrounding code where needed.
+
+            Look only for real problems: bugs, crashes, broken game logic, things that break on
+            phones (touch, small screens), slow per-frame drawing, broken tests or test hook
+            (window.__train), missing `?v=N` bump in index.html when game.js or style.css changed,
+            and anything copied from a commercial train game. Skip style nitpicks.
+
+            Post inline comments on specific lines with mcp__github_inline_comment__create_inline_comment,
+            then one short summary comment with `gh pr comment`. Write it in plain, friendly English.
+            If you find nothing, say so in one line.
+
+            Finally write exactly one word to the file review-verdict.txt in the working directory:
+            BLOCK if at least one problem must be fixed before merging, otherwise PASS.
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Read,Grep,Glob,Write(review-verdict.txt)"
+
+      - name: Fail on a must-fix bug
+        if: env.HAS_KEY == 'true'
+        run: |
+          verdict=$(tr -d '[:space:]' < review-verdict.txt 2>/dev/null || echo PASS)
+          echo "Claude review verdict: ${verdict:-PASS}" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$verdict" = "BLOCK" ]; then
+            echo "::error::Claude review found a must-fix problem, see the PR comments."
+            exit 1
+          fi
