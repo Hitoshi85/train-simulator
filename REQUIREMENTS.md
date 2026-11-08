@@ -18,12 +18,12 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | R1 | Original browser train-driving game in the Japanese train-sim genre. Not a copy: no names, characters, art, music, routes or UI from commercial titles. Working title "Aozora Line". | Done |
 | R2 | Plain HTML/CSS/JS, no build step; runs in any modern browser. | Done |
 | R3 | Three power notches P1–P3 and three brake notches B1–B3 (P3 and B3 as strong as the old top notches), neutral and an emergency brake; every departure starts on P1 (Hitoshi's choice, 2026-11-08). Keyboard (↑/W, ↓/S, N, Space, Enter) and on-screen buttons for touch. | Done |
-| R4 | One fictional 8.6 km line, 9 stations about 1 km apart: Hinata (0 m), Kozakura (900), Kawabe (1800), Nanohana (3000), Momijidai (4200), Hotarubashi (5100), Shiokaze (6000), Yuzuhara (7300), Tsukimino (8600); 8 stops. | Done (#15) |
+| R4 | One 8.6 km line, 9 stations about 1 km apart, based on a real seaside line in Japan (distances shortened for the game): Fujisawa (0 m), Kugenuma (900), Enoshima (1800), Koshigoe (3000), Kamakura-Kokomae (4200), Shichirigahama (5100), Inamuragasaki (6000), Hase (7300), Kamakura (8600); 8 stops. Station boards show the name in kanji and romaji. (Replaced the fictional Hinata to Tsukimino names.) | Done (#15, real towns in #24) |
 | R5 | Speed limits shown by the track and on the speedometer; overspeed costs points. | Done |
 | R6 | Stop-on-the-mark scoring at each station: up to 1000 for accuracy (+500 under 30 cm), up to 500 for punctuality, +200 for a smooth stop on B1–B3, 0 for overrunning the mark by 30 m. | Done |
 | R7 | Cats appear frequently: lots of cats beside the track and on platforms ("cats everywhere"). Original cats only. | Done |
 | R8 | Cat-spotting counter ("Cats spotted", top left); each cat passed is worth +2 points at the next station. | Done (rebalance #5 dropped by owner, 2026-11-08) |
-| R9 | Scenery changes every 10 seconds, picked at random with a short fade, between three pastoral scenes: Rice Paddy Valley, Forest Hills, Seaside Town (replaced Snowy Peaks, Red-Rock Canyon and Coastal Cliffs in the painted-look PR). | Done (#19) |
+| R9 | Scenery follows the real towns along the line with a short fade and a "Now entering" notice: Fujisawa town, Kugenuma pine woods, the Enoshima coast, Koshigoe town, the Shichirigahama coast, the Hase temple hills and Kamakura town. Replaces the random change every 10 seconds. | Done (#19, by town in #24) |
 | R10 | Playable on a phone from a shareable web link that always shows the latest version (no stale cache). | Done (phone layout in R14) |
 | R11 | Live camera insets in the top-right of the view, always on: FRONT CAM (outside camera ahead of the train looking back at its nose and side) and REAR CAM (from the tail looking back down the track). Rendered by the game, not real video. | Done (#15) |
 | R12 | Platform camera inset that appears in sync as the train approaches each station (last 500 m), showing the train pulling in. | Done (#15) |
@@ -31,11 +31,12 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | R14 | Comfortable on a phone: in portrait (390×844) and landscape (844×390) the view and all touch buttons fit on one screen with no scrolling; touch buttons at least 44 px tall (portrait: big buttons at thumb height; landscape: two-thumb layout with brake side left, power side right); keyboard help hidden on touch screens. Closes #10. | Done (#17) |
 | R15 | Pause with P or Esc and a Pause / Resume button; the train, clock and sound freeze; switching tabs or apps pauses automatically; tap, P, Esc or Enter resumes. Closes #7. | Done (#17) |
 | R16 | Uphill and downhill sections up to ±25‰ (moderate, chosen by Hitoshi) change acceleration by about g × ‰ / 1000: coasting slows uphill and speeds up downhill. Gradient posts (number and up/down arm, "L" for level) stand beside the track at each change, and the dashboard shows the current gradient. Stations stay on level track. Closes #9. | Done (#18) |
-| R17 | Express mode chosen on the title screen (▲/▼ or L/E, touch ▲/▼): stops at Kawabe, Momijidai, Shiokaze and Tsukimino and passes the other 4 stations (green PASS board, no judging), with a tighter timetable (about 35–40% shorter than the Local runs it replaces) and +15 km/h on open track (85 → 100, 90 → 105). The end screen names the mode. Closes #11. | Done (#20) |
+| R17 | Express mode chosen on the title screen (▲/▼ or L/E, touch ▲/▼): stops at Enoshima, Kamakura-Kokomae, Inamuragasaki and Kamakura (formerly Kawabe, Momijidai, Shiokaze, Tsukimino) and passes the other 4 stations (green PASS board, no judging), with a tighter timetable (about 35–40% shorter than the Local runs it replaces) and +15 km/h on open track (85 → 100, 90 → 105). The end screen names the mode. Closes #11. | Done (#20) |
 | R18 | Hand-painted pastoral look inspired by the soft style of Japanese animated films, with original art only (no characters, creatures or scenes from any film): watercolour skies with towering clouds, layered hazy hills, lush greenery, warm light and paper grain. Covers scenery, stations, the train and cats; the dashboard stays clean. | Done (#19) |
 | R19 | Light shifts along the line: morning at Hinata, bright midday mid-line, a golden evening near Tsukimino. | Done (#19) |
 | R20 | Rich living world: drifting clouds, flocks of birds, swaying trees and grass, wildflowers, drifting petals by day, rippling rice paddies, washing lines, sailboats, sun rays and fireflies in the evening. | Done (#19) |
 | R21 | Camera insets match the cab view: same scene and time of day, with the sea, hills and hillside town on the correct side for cameras that look back along the train; no centre pillar across the cab window. | Done |
+| R22 | Real towns in Japan with original art in the painted style: houses with tiled roofs and coastal black pines in the towns, the sea, sailboats and Enoshima island with its lighthouse tower on the coast, temple halls, a vermilion shrine gate, maples and hydrangeas in the Hase hills. Distant landmarks (Mt Fuji across the bay, Enoshima island, the Inamuragasaki cape) are placed by real map bearing, so each camera sees them where they really are (Mt Fuji shows in the rear camera along the coast). Route data (stations, scene zones, map layout, landmarks) lives in one `ROUTE` object so more lines can be added. | Done (#24) |
 
 ### How we work
 
@@ -75,6 +76,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | 2026-11-08 | CI phone screenshots and a 16 ms frame-draw budget at phone size on every PR; Claude review agent workflow | [#21](https://github.com/Hitoshi85/train-simulator/pull/21) |
 | 2026-11-08 | Merge queue with auto-merge (green + screenshot + 800 lines or fewer, oldest first, rebase and re-test) and a post-deploy live check that posts the phone link | [#22](https://github.com/Hitoshi85/train-simulator/pull/22) |
 | 2026-11-08 | 3 power and 3 brake notches, departures start on P1; black centre line (cab window pillar) removed; front and rear cameras now show the sea, hills and town on the matching side; insets render at a quarter of the screen size so three cameras near a station stay inside the 16 ms phone frame budget | This PR |
+| 2026-11-08 | Real towns in Japan: the line now follows the seaside line from Fujisawa to Kamakura via Enoshima (real station names, kanji boards), scenery by town (towns, pine woods, coast, temple hills), and Mt Fuji, Enoshima island and the Inamuragasaki cape placed by map bearing in every camera. Preview: [docs/screens/real-towns.png](docs/screens/real-towns.png) | [#24](https://github.com/Hitoshi85/train-simulator/pull/24) |
 
 ## 3. Feedback log
 
@@ -118,6 +120,9 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-08 | Hitoshi sent "M" for the merge-queue PR (#22). | Merged after #19 and #21, once CI was green. |
 | 2026-11-08 | New list: 3 acceleration and 3 brake levels; start at acceleration 1; remove the black line in the middle of the screen; make the front and rear cams match the landscape; real towns in Japan; day/night/rain/snow; bullet train option; course/train select like a kart racer (on hold). | Controls, black line and cameras built in one small PR (R3, R21); towns and weather in a parallel thread; bullet train and course select still to plan. |
 | 2026-11-08 | Question: what should "start at acceleration 1" do? (options: P1 at every departure, P1 only at the first departure, first Power press jumps to P1) | Hitoshi chose P1 at every departure (R3). |
+| 2026-11-08 | Hitoshi dropped the bullet train and course select for now ("Don't do 4 for now", "Don't do 3 either"). | Not planned for now; the route data is still kept in one object so more lines are easy later. |
+| 2026-11-08 | Question: which real line should the 9 stations follow? (options: seaside line Fujisawa to Kamakura via Enoshima, mountain line Odawara to Gora, city corridor Tokyo to Yokohama) | Hitoshi chose the seaside line; built in #24 (R4, R9, R22). |
+| 2026-11-08 | Question: how should day, night, rain and snow be chosen? (options: pick before each run, random each run, change during the run) | Hitoshi chose change during the run: morning to evening to night, with rain or snow rolling in partway. Built next, in a follow-up PR (covers #12). |
 
 ## 4. Open backlog
 
@@ -125,7 +130,7 @@ Add the `ready` label to an issue to start it.
 
 | Issue | Task | Status |
 |---|---|---|
-| [#12](https://github.com/Hitoshi85/train-simulator/issues/12) | Add an evening run with lighting and rain | Skipped for now (after the restyle) |
+| [#12](https://github.com/Hitoshi85/train-simulator/issues/12) | Add an evening run with lighting and rain | In progress: day to night with rain or snow during the run (follow-up to #24) |
 
 Removed by the owner on 2026-11-08 (closed as not planned): [#5](https://github.com/Hitoshi85/train-simulator/issues/5) cat bonus rebalance, [#6](https://github.com/Hitoshi85/train-simulator/issues/6) save best score.
 
