@@ -17,7 +17,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 |---|---|---|
 | R1 | Original browser train-driving game in the Japanese train-sim genre. Not a copy: no names, characters, art, music, routes or UI from commercial titles. Working title "Aozora Line". | Done |
 | R2 | Plain HTML/CSS/JS, no build step; runs in any modern browser. | Done |
-| R3 | Power notches P1–P5, brake notches B1–B8, neutral and an emergency brake. Keyboard (↑/W, ↓/S, N, Space, Enter) and on-screen buttons for touch. | Done |
+| R3 | Three power notches P1–P3 and three brake notches B1–B3 (P3 and B3 as strong as the old top notches), neutral and an emergency brake; every departure starts on P1 (Hitoshi's choice, 2026-11-08). Keyboard (↑/W, ↓/S, N, Space, Enter) and on-screen buttons for touch. | Done |
 | R4 | One fictional 8.6 km line, 9 stations about 1 km apart: Hinata (0 m), Kozakura (900), Kawabe (1800), Nanohana (3000), Momijidai (4200), Hotarubashi (5100), Shiokaze (6000), Yuzuhara (7300), Tsukimino (8600); 8 stops. | Done (#15) |
 | R5 | Speed limits shown by the track and on the speedometer; overspeed costs points. | Done |
 | R6 | Stop-on-the-mark scoring at each station: up to 1000 for accuracy (+500 under 30 cm), up to 500 for punctuality, +200 for a smooth stop on B1–B3, 0 for overrunning the mark by 30 m. | Done |
@@ -35,6 +35,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | R18 | Hand-painted pastoral look inspired by the soft style of Japanese animated films, with original art only (no characters, creatures or scenes from any film): watercolour skies with towering clouds, layered hazy hills, lush greenery, warm light and paper grain. Covers scenery, stations, the train and cats; the dashboard stays clean. | Done (#19) |
 | R19 | Light shifts along the line: morning at Hinata, bright midday mid-line, a golden evening near Tsukimino. | Done (#19) |
 | R20 | Rich living world: drifting clouds, flocks of birds, swaying trees and grass, wildflowers, drifting petals by day, rippling rice paddies, washing lines, sailboats, sun rays and fireflies in the evening. | Done (#19) |
+| R21 | Camera insets match the cab view: same scene and time of day, with the sea, hills and hillside town on the correct side for cameras that look back along the train; no centre pillar across the cab window. | Done |
 
 ### How we work
 
@@ -73,6 +74,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | 2026-11-08 | Hand-painted pastoral look: watercolour sky and clouds, three pastoral scenes, morning-to-evening light along the line, living details (birds, swaying trees and grass, petals, paddies, sailboats, fireflies), repainted stations and train. Preview: [docs/screens/painted-look.png](docs/screens/painted-look.png) | [#19](https://github.com/Hitoshi85/train-simulator/pull/19) |
 | 2026-11-08 | CI phone screenshots and a 16 ms frame-draw budget at phone size on every PR; Claude review agent workflow | [#21](https://github.com/Hitoshi85/train-simulator/pull/21) |
 | 2026-11-08 | Merge queue with auto-merge (green + screenshot + 800 lines or fewer, oldest first, rebase and re-test) and a post-deploy live check that posts the phone link | [#22](https://github.com/Hitoshi85/train-simulator/pull/22) |
+| 2026-11-08 | 3 power and 3 brake notches, departures start on P1; black centre line (cab window pillar) removed; front and rear cameras now show the sea, hills and town on the matching side | This PR |
 
 ## 3. Feedback log
 
@@ -114,6 +116,8 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-08 | Question: how should the review agent sign in? (options: Claude subscription token, Anthropic API key, not yet) | Hitoshi chose "not yet": the review workflow ships and skips until a secret is added (W13, #21). |
 | 2026-11-08 | Question: which PRs should merge by themselves? (options: small PRs with a screenshot, every PR with a screenshot, only PRs labelled automerge) | Hitoshi first chose every PR with a screenshot, then changed it to small PRs with a screenshot (under about 800 changed lines); built that way (W4). |
 | 2026-11-08 | Hitoshi sent "M" for the merge-queue PR (#22). | Merged after #19 and #21, once CI was green. |
+| 2026-11-08 | New list: 3 acceleration and 3 brake levels; start at acceleration 1; remove the black line in the middle of the screen; make the front and rear cams match the landscape; real towns in Japan; day/night/rain/snow; bullet train option; course/train select like a kart racer (on hold). | Controls, black line and cameras built in one small PR (R3, R21); towns and weather in a parallel thread; bullet train and course select still to plan. |
+| 2026-11-08 | Question: what should "start at acceleration 1" do? (options: P1 at every departure, P1 only at the first departure, first Power press jumps to P1) | Hitoshi chose P1 at every departure (R3). |
 
 ## 4. Open backlog
 

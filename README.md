@@ -8,15 +8,15 @@ Open `index.html` in any modern browser, or play the GitHub Pages build (deploye
 
 ## How to drive
 
-- **↑ / W**: more power (P1–P5)
-- **↓ / S**: more brake (B1–B8)
+- **↑ / W**: more power (P1–P3); every departure starts on P1
+- **↓ / S**: more brake (B1–B3)
 - **N**: neutral, **Space**: emergency brake
 - **Enter** (or tap): start / continue
 
 Drive through 4 fictional stations. Stay under the speed limit (red arc on the speedometer, signs by the track),
 stop with the front of the train on the yellow **STOP** mark, and arrive on time.
 Each stop scores up to 1000 for accuracy (+500 for a perfect stop under 30 cm), up to 500 for punctuality,
-+200 for a smooth stop on B1–B3, minus overspeed penalties. Overrunning the mark by 30 m scores nothing.
++200 for a smooth stop on B1–B2, minus overspeed penalties. Overrunning the mark by 30 m scores nothing.
 
 ### Cats and scenery
 

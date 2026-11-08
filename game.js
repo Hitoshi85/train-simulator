@@ -61,15 +61,16 @@
   const curvature = (p) => 0.0007 * Math.sin(p / 520) * Math.sin(p / 1300 + 1);
 
   // ---------- Train physics ----------
-  // lever: -9 = EB, -8..-1 = B8..B1, 0 = N, 1..5 = P1..P5
-  const leverName = (l) => l === -9 ? 'EB' : l < 0 ? 'B' + (-l) : l === 0 ? 'N' : 'P' + l;
+  // lever: -4 = EB, -3..-1 = B3..B1, 0 = N, 1..3 = P1..P3. P3 and B3 match the old top notches.
+  const P_MAX = 3, B_MAX = 3, EB = -(B_MAX + 1);
+  const leverName = (l) => l === EB ? 'EB' : l < 0 ? 'B' + (-l) : l === 0 ? 'N' : 'P' + l;
   // grade in ‰: gravity adds about g × ‰ / 1000 (slows uphill, speeds up downhill).
   function accel(lever, v, grade = 0) {
     const kmh = v * 3.6;
     let a = 0;
-    if (lever > 0) a = lever * 0.17 * (kmh < 40 ? 1 : 40 / kmh);
-    else if (lever === -9) a = -1.4;
-    else if (lever < 0) a = lever * 0.13;
+    if (lever > 0) a = lever * 0.28 * (kmh < 40 ? 1 : 40 / kmh);
+    else if (lever === EB) a = -1.4;
+    else if (lever < 0) a = lever * 0.35;
     a -= 0.02 + 0.00003 * v * v; // rolling + air resistance
     a -= 9.8 * grade / 1000;
     return a;
@@ -82,7 +83,7 @@
       state: 'title', // title | ready | running | arrived | end
       mode: g ? g.mode : 'local', // local | express (kept when playing again)
       passed: [],                 // stations passed without stopping (Express)
-      pos: 0, v: 0, lever: -8,
+      pos: 0, v: 0, lever: -B_MAX,
       seg: 1,                     // index of the station we're heading to (set by setMode)
       clock: 8 * 3600,            // game clock (s)
       sched: 0,                   // scheduled arrival
@@ -101,6 +102,7 @@
     g.sched = g.clock + (g.mode === 'express' ? st.exp : st.run);
     g.overspeedPen = 0; g.failed = false; g.cats = 0;
     g.state = 'running';
+    g.lever = 1; // every departure starts on P1
     flash('Depart for ' + st.name + '!');
   }
   function flash(m, t = 2.5) { g.msg = m; g.msgT = t; }
@@ -113,7 +115,7 @@
     let stopPts = g.failed ? 0 : Math.round(1000 * Math.max(0, 1 - err / 10));
     let perfect = !g.failed && err < 0.3 ? 500 : 0;
     let timePts = g.failed ? 0 : Math.round(Math.max(0, 500 - Math.abs(diff) * (diff > 0 ? 10 : 5)));
-    let smooth = !g.failed && g.lever >= -3 && g.lever < 0 ? 200 : 0;
+    let smooth = !g.failed && g.lever >= -2 && g.lever < 0 ? 200 : 0;
     const catPts = g.cats * CAT_BONUS;
     const total = Math.max(0, stopPts + perfect + timePts + smooth + catPts - g.overspeedPen);
     g.score += total;
@@ -151,7 +153,7 @@
     const st = STATIONS[g.seg];
     const d = st.pos - g.pos;
     if (d < -30 && !g.failed) {
-      g.failed = true; g.lever = -9;
+      g.failed = true; g.lever = EB;
       flash('OVERRUN! Emergency brake.', 3);
     }
     if (g.v < 0.01 && g.lever < 0 && d < 150) {
@@ -243,9 +245,9 @@
       const powered = running && g.lever > 0;
       motor[0].frequency.setTargetAtTime(45 + kmh * 7, t, 0.1);
       motor[1].frequency.setTargetAtTime(90 + kmh * 14, t, 0.1);
-      motorGain.gain.setTargetAtTime(powered ? 0.05 + 0.012 * g.lever : (g.v > 0.5 ? 0.012 : 0), t, 0.15);
+      motorGain.gain.setTargetAtTime(powered ? 0.05 + 0.02 * g.lever : (g.v > 0.5 ? 0.012 : 0), t, 0.15);
       roll.gain.setTargetAtTime(Math.min(1, g.v / 25) * 0.25, t, 0.2);
-      hiss.gain.setTargetAtTime(g.lever < 0 && g.v > 0.3 ? 0.012 + 0.003 * -g.lever : 0, t, 0.1);
+      hiss.gain.setTargetAtTime(g.lever < 0 && g.v > 0.3 ? 0.012 + 0.006 * -g.lever : 0, t, 0.1);
       // rail joints every 25 m: a clack for each pair of wheels
       const j = Math.floor(g.pos / 25);
       if (j !== joint && g.v > 1) {
@@ -296,12 +298,12 @@
     if (a === 'pause') { setPaused(!g.paused); return; }
     if (g.paused) { if (a === 'enter') setPaused(false); return; } // only resume while paused
     if (a === 'enter') {
-      if (g.state === 'title') { g.state = 'ready'; g.lever = -8; flash('Doors closed. Release brake and power up!', 3); startSegment(); }
+      if (g.state === 'title') { g.state = 'ready'; startSegment(); flash('Doors closed. Off we go on P1!', 3); }
       else if (g.state === 'arrived') {
         if (g.seg >= STATIONS.length - 1) { g.state = 'end'; }
         else {
           g.clock = Math.max(g.clock + 15, g.sched + DWELL);
-          g.seg = nextStop(g.seg); g.lever = -8; startSegment();
+          g.seg = nextStop(g.seg); startSegment();
         }
       } else if (g.state === 'end') { reset(); setMode(g.mode); }
       return;
@@ -312,10 +314,10 @@
       return;
     }
     if (g.state !== 'running') return;
-    if (a === 'power') g.lever = Math.min(5, g.lever === -9 ? -8 : g.lever + 1);
-    else if (a === 'brake') g.lever = Math.max(-8, g.lever === -9 ? -9 : g.lever - 1);
+    if (a === 'power') g.lever = Math.min(P_MAX, g.lever === EB ? -B_MAX : g.lever + 1);
+    else if (a === 'brake') g.lever = Math.max(-B_MAX, g.lever === EB ? EB : g.lever - 1);
     else if (a === 'neutral') g.lever = 0;
-    else if (a === 'eb') g.lever = -9;
+    else if (a === 'eb') g.lever = EB;
   }
   const KEYS = { ArrowUp: 'power', KeyW: 'power', ArrowDown: 'brake', KeyS: 'brake', KeyN: 'neutral', Space: 'eb', Enter: 'enter', NumpadEnter: 'enter', KeyM: 'mute', KeyP: 'pause', Escape: 'pause', KeyL: 'local', KeyE: 'express' };
   // Browsers only allow audio after a user gesture, so start it on the first key or tap.
@@ -388,7 +390,16 @@
     x: hash(i + 40) * 1400, y: 30 + hash(i + 41) * 60, r: 13 + hash(i + 42) * 20,
     n: 6 + Math.floor(hash(i + 43) * 5), tall: hash(i + 44) < 0.4, sp: 2 + hash(i + 45) * 4,
   }));
-  function drawSky(L, pan, now) {
+  // Screen-space backdrops (sky, hills, islands, hillside town) are painted for a forward view.
+  // A camera looking back along the track sees the world left-right swapped, so mirror them to
+  // keep them on the same side as the track-side scenery (e.g. the sea stays on the sea side).
+  function backdrop(fn) {
+    if (cam.dir > 0) { fn(); return; }
+    ctx.save(); ctx.translate(W, 0); ctx.scale(-1, 1); fn(); ctx.restore();
+    stats.mirrored++;
+  }
+  function drawSky(L, pan, now) { backdrop(() => paintSky(L, pan, now)); }
+  function paintSky(L, pan, now) {
     const grd = ctx.createLinearGradient(0, 0, 0, HORIZON);
     grd.addColorStop(0, rgb(L.top)); grd.addColorStop(0.55, rgb(L.mid)); grd.addColorStop(1, rgb(L.low));
     ctx.fillStyle = grd; ctx.fillRect(0, 0, W, HORIZON + 2);
@@ -453,6 +464,10 @@
     ctx.fill();
   }
   function drawLand(name, pan, now, L, ZMIN) {
+    backdrop(() => drawRidges(name, pan, L));
+    drawGround(name, now, L, ZMIN);
+  }
+  function drawRidges(name, pan, L) {
     if (name === 'paddies') {
       drawHills(L, pan, [
         ['#7d95a8', 0.55, 30, 40, 140, 1, 0.3, 0], ['#5f8a68', 0.3, 12, 34, 95, 4, 0.6, 5], ['#4f7f45', 0.1, 0, 22, 70, 2, 1, 4],
@@ -476,6 +491,8 @@
         ctx.fillStyle = rgb(lit(roofs[i % roofs.length])); ctx.beginPath(); ctx.moveTo(x - 2, y - 7); ctx.lineTo(x + 6, y - 12); ctx.lineTo(x + 14, y - 7); ctx.fill();
       }
     }
+  }
+  function drawGround(name, now, L, ZMIN) {
     // ground, hazier in the distance
     const [g0, g1] = GROUND[name];
     const grd = ctx.createLinearGradient(0, HORIZON, 0, VIEW_H);
@@ -535,11 +552,12 @@
     sea.addColorStop(0, rgb(mix(lit('#5aa6cf'), L.low, 0.35))); sea.addColorStop(1, rgb(lit('#2f7fb4')));
     ctx.fillStyle = sea; ctx.beginPath();
     for (let z = ZMIN; z <= ZMAX; z *= 1.08) { const p = project(11, 0, z); ctx.lineTo(p.x, p.y); }
-    ctx.lineTo(W, HORIZON); ctx.lineTo(W, VIEW_H); ctx.fill();
+    const edge = cam.dir > 0 ? W : 0; // the sea lies off the right side going forward, left looking back
+    ctx.lineTo(edge, HORIZON); ctx.lineTo(edge, VIEW_H); ctx.fill();
     ctx.clip();
     ctx.fillStyle = rgb(mix(L.sun, [255, 255, 255], 0.5), 0.8); // glitter
     for (let i = 0; i < 40; i++) {
-      const x = W * L.sunX + (hash(i) - 0.5) * 260, y = HORIZON + 2 + hash(i + 9) * 60;
+      const x = W * (cam.dir > 0 ? L.sunX : 1 - L.sunX) + (hash(i) - 0.5) * 260, y = HORIZON + 2 + hash(i + 9) * 60;
       const tw = Math.max(0, Math.sin(now * 3 + i));
       ctx.fillRect(x - 6 * tw, y, 12 * tw, 1.5);
     }
@@ -737,7 +755,7 @@
     for (let s = Math.ceil(a / CAT_STEP) * CAT_STEP; s < b; s += CAT_STEP) { const c = catAt(s); if (c) out.push(c); }
     return out;
   }
-  const stats = { catsDrawn: 0, frames: 0, trainDrawn: 0, gradePostsDrawn: 0, passDrawn: 0, insets: {}, lastInsets: [], trees: 0, birds: 0, fireflies: 0 }; // render counters for automated tests
+  const stats = { catsDrawn: 0, frames: 0, trainDrawn: 0, gradePostsDrawn: 0, passDrawn: 0, insets: {}, lastInsets: [], mirrored: 0, trees: 0, birds: 0, fireflies: 0 }; // render counters for automated tests
   function drawCat(c, p) {
     const s = p.s * 1.4; // cats drawn a bit larger than life so you can spot them
     if (s < 1.2) return;
@@ -788,7 +806,8 @@
 
     const now = performance.now() / 1000;
     const L = light = lightAt(g.pos);
-    const pan = -offCache[offCache.length - 1] * 0.15 - cam.pos * cam.dir * 0.002;
+    // Backdrops drift with the curve ahead; flip that for mirrored (rear-facing) views.
+    const pan = -offCache[offCache.length - 1] * 0.15 * cam.dir - cam.pos * 0.002;
     const ZMIN = cam.h * FOCAL / (VIEW_H - HORIZON) * 0.9, ZMAX = 600;
     drawSky(L, pan, now);
     if (scene.blend < 1) {
@@ -945,7 +964,6 @@
     if (cam.frame) { // cab window frame
       ctx.fillStyle = '#1b1f24';
       ctx.fillRect(0, 0, W, 14); ctx.fillRect(0, 0, 14, VIEW_H); ctx.fillRect(W - 14, 0, 14, VIEW_H);
-      ctx.fillRect(W / 2 - 4, 0, 8, VIEW_H);
     }
   }
 
@@ -1097,14 +1115,15 @@
     ctx.font = '10px sans-serif'; ctx.fillStyle = '#999'; ctx.fillText('km/h', cx, cy + 50);
 
     // lever
-    const lx = 220, ly = y0 + 14, notches = [5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5, -6, -7, -8, -9];
-    ctx.font = 'bold 10px monospace'; ctx.textAlign = 'left';
+    const lx = 220, ly = y0 + 14, notches = [];
+    for (let n = P_MAX; n >= EB; n--) notches.push(n);
+    ctx.font = 'bold 11px monospace'; ctx.textAlign = 'left';
     notches.forEach((n, i) => {
-      const y = ly + i * 9.3;
+      const y = ly + i * 17;
       const on = n === g.lever;
-      ctx.fillStyle = on ? (n > 0 ? '#3fb950' : n < 0 ? (n === -9 ? '#ff3030' : '#f0883e') : '#ddd') : '#444';
-      ctx.fillRect(lx, y, 34, 8);
-      ctx.fillStyle = on ? '#000' : '#aaa'; ctx.fillText(leverName(n), lx + 4, y + 7);
+      ctx.fillStyle = on ? (n > 0 ? '#3fb950' : n < 0 ? (n === EB ? '#ff3030' : '#f0883e') : '#ddd') : '#444';
+      ctx.fillRect(lx, y, 34, 14);
+      ctx.fillStyle = on ? '#000' : '#aaa'; ctx.fillText(leverName(n), lx + 5, y + 11);
     });
     ctx.fillStyle = '#fff'; ctx.font = 'bold 16px monospace'; ctx.fillText(leverName(g.lever), lx + 42, ly + 70);
 
@@ -1233,6 +1252,12 @@
     if (g.state !== 'title' && g.state !== 'end') drawInsets();
     drawDash(); drawOverlay();
   }
+  // Test hook: draw one camera ('cab', 'front', 'rear', 'platform') full size on the main canvas.
+  function renderCam(id) {
+    const v = id === 'cab' ? { cam: { pos: g.pos, dir: 1, x: 0, h: CAM_H } } : insetViews().find((x) => x.id === id);
+    if (v) drawWorld(v.cam);
+    return !!v;
+  }
   function step(dt) { if (g.paused) return; update(dt); updateScene(dt); }
   let last = performance.now();
   function frame(now) {
@@ -1243,7 +1268,7 @@
   }
 
   // Exposed for automated testing: set paused = true, then drive the game with step(dt) and render().
-  const hook = { get state() { return g; }, scene, stats, act, step, render, paused: false, setPaused, sound, STATIONS, get LIMITS() { return LIMITS; }, GRADES, accel, limitAt, gradeAt, catsBetween, lightAt, stopsAt };
+  const hook = { get state() { return g; }, scene, stats, act, step, render, renderCam, paused: false, setPaused, sound, STATIONS, get LIMITS() { return LIMITS; }, GRADES, accel, limitAt, gradeAt, catsBetween, lightAt, stopsAt };
   window.__train = hook;
   requestAnimationFrame(frame);
 })();
