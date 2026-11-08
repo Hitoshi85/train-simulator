@@ -13,18 +13,22 @@
   const FOCAL = 600;           // projection focal length (px)
 
   // ---------- Route (all fictional) ----------
+  // run: scheduled seconds from the previous stop (Local). exp: seconds from the previous
+  // Express stop; stations without exp are passed by the Express without stopping.
   const STATIONS = [
-    { name: 'Hinata',     pos: 0 },
+    { name: 'Hinata',     pos: 0, exp: 0 },
     { name: 'Kozakura',   pos: 900,  run: 95 },
-    { name: 'Kawabe',     pos: 1800, run: 90 },
+    { name: 'Kawabe',     pos: 1800, run: 90, exp: 130 },
     { name: 'Nanohana',   pos: 3000, run: 115 },
-    { name: 'Momijidai',  pos: 4200, run: 110 },
+    { name: 'Momijidai',  pos: 4200, run: 110, exp: 175 },
     { name: 'Hotarubashi', pos: 5100, run: 95 },
-    { name: 'Shiokaze',   pos: 6000, run: 90 },
+    { name: 'Shiokaze',   pos: 6000, run: 90, exp: 140 },
     { name: 'Yuzuhara',   pos: 7300, run: 120 },
-    { name: 'Tsukimino',  pos: 8600, run: 120 },
+    { name: 'Tsukimino',  pos: 8600, run: 120, exp: 160 },
   ];
-  const LIMITS = [
+  const MODES = ['local', 'express'];
+  const MODE_NAMES = { local: 'Local', express: 'Express' };
+  const LOCAL_LIMITS = [
     { at: 0, lim: 45 }, { at: 250, lim: 85 }, { at: 1450, lim: 70 },
     { at: 1900, lim: 85 }, { at: 3000, lim: 55 }, { at: 3600, lim: 85 },
     { at: 4350, lim: 75 }, { at: 5300, lim: 60 }, { at: 6150, lim: 90 },
@@ -42,6 +46,12 @@
     { at: 6200, pm: -10 }, { at: 6600, pm: 25 }, { at: 7000, pm: 0 },
     { at: 7500, pm: -25 }, { at: 8000, pm: -10 }, { at: 8300, pm: 0 },
   ];
+  // Express: +15 km/h on the open stretches (85 km/h and up); slower sections stay as they are.
+  const EXPRESS_LIMITS = LOCAL_LIMITS.map((L) => (L.lim >= 85 ? { at: L.at, lim: L.lim + 15 } : L));
+  let LIMITS = LOCAL_LIMITS;
+  // Does the train stop at station i in the given mode?
+  const stopsAt = (i, mode) => mode !== 'express' || STATIONS[i].exp !== undefined;
+  const stopCount = (mode) => STATIONS.filter((_, i) => i > 0 && stopsAt(i, mode)).length;
   const TRAIN_LEN = 80;      // 4 cars of 20 m
   const DWELL = 30;          // scheduled seconds at each station
   const CAT_BONUS = 2; // points per cat spotted on the way
@@ -70,8 +80,10 @@
   function reset() {
     g = {
       state: 'title', // title | ready | running | arrived | end
+      mode: g ? g.mode : 'local', // local | express (kept when playing again)
+      passed: [],                 // stations passed without stopping (Express)
       pos: 0, v: 0, lever: -8,
-      seg: 1,                     // index of the station we're heading to
+      seg: 1,                     // index of the station we're heading to (set by setMode)
       clock: 8 * 3600,            // game clock (s)
       sched: 0,                   // scheduled arrival
       score: 0, stationScore: 0, overspeedPen: 0, overTimer: 0, cats: 0,
@@ -80,10 +92,13 @@
     };
   }
   reset();
+  setMode('local');
 
+  function setMode(m) { g.mode = m; LIMITS = m === 'express' ? EXPRESS_LIMITS : LOCAL_LIMITS; g.seg = nextStop(0); }
+  function nextStop(i) { do i++; while (i < STATIONS.length - 1 && !stopsAt(i, g.mode)); return i; }
   function startSegment() {
     const st = STATIONS[g.seg];
-    g.sched = g.clock + st.run;
+    g.sched = g.clock + (g.mode === 'express' ? st.exp : st.run);
     g.overspeedPen = 0; g.failed = false; g.cats = 0;
     g.state = 'running';
     flash('Depart for ' + st.name + '!');
@@ -118,6 +133,12 @@
     const before = g.pos;
     g.pos += g.v * dt;
     g.cats += catsBetween(before, g.pos).length;
+    // Passing a station without stopping (Express): no judging, just a note.
+    for (let i = 1; i < g.seg; i++) {
+      if (!g.passed.includes(i) && before < STATIONS[i].pos && g.pos >= STATIONS[i].pos) {
+        g.passed.push(i); flash('Passing ' + STATIONS[i].name + ' · Express', 2);
+      }
+    }
 
     // Speed limit
     const kmh = g.v * 3.6, lim = limitAt(g.pos);
@@ -280,9 +301,14 @@
         if (g.seg >= STATIONS.length - 1) { g.state = 'end'; }
         else {
           g.clock = Math.max(g.clock + 15, g.sched + DWELL);
-          g.seg++; g.lever = -8; startSegment();
+          g.seg = nextStop(g.seg); g.lever = -8; startSegment();
         }
-      } else if (g.state === 'end') reset();
+      } else if (g.state === 'end') { reset(); setMode(g.mode); }
+      return;
+    }
+    if (g.state === 'title') { // ▲/▼ (or L/E) pick the mode on the title screen
+      if (a === 'power' || a === 'brake') setMode(MODES[(MODES.indexOf(g.mode) + 1) % MODES.length]);
+      else if (a === 'local' || a === 'express') setMode(a);
       return;
     }
     if (g.state !== 'running') return;
@@ -291,7 +317,7 @@
     else if (a === 'neutral') g.lever = 0;
     else if (a === 'eb') g.lever = -9;
   }
-  const KEYS = { ArrowUp: 'power', KeyW: 'power', ArrowDown: 'brake', KeyS: 'brake', KeyN: 'neutral', Space: 'eb', Enter: 'enter', NumpadEnter: 'enter', KeyM: 'mute', KeyP: 'pause', Escape: 'pause' };
+  const KEYS = { ArrowUp: 'power', KeyW: 'power', ArrowDown: 'brake', KeyS: 'brake', KeyN: 'neutral', Space: 'eb', Enter: 'enter', NumpadEnter: 'enter', KeyM: 'mute', KeyP: 'pause', Escape: 'pause', KeyL: 'local', KeyE: 'express' };
   // Browsers only allow audio after a user gesture, so start it on the first key or tap.
   addEventListener('keydown', () => sound.start());
   addEventListener('pointerdown', () => sound.start());
@@ -476,7 +502,7 @@
     for (let s = Math.ceil(a / CAT_STEP) * CAT_STEP; s < b; s += CAT_STEP) { const c = catAt(s); if (c) out.push(c); }
     return out;
   }
-  const stats = { catsDrawn: 0, frames: 0, trainDrawn: 0, gradePostsDrawn: 0, insets: {}, lastInsets: [] }; // render counters for automated tests
+  const stats = { catsDrawn: 0, frames: 0, trainDrawn: 0, gradePostsDrawn: 0, passDrawn: 0, insets: {}, lastInsets: [] }; // render counters for automated tests
   function drawCat(c, p) {
     const s = p.s * 1.4; // cats drawn a bit larger than life so you can spot them
     if (s < 1.2) return;
@@ -571,7 +597,7 @@
       const za = zOf(S.pos - 160), zb = zOf(S.pos + 30), z0 = Math.min(za, zb), z1 = Math.max(za, zb);
       // sorted by its far end so the train, cats and signs on or beside it are drawn over it
       if (z1 > ZMIN && z0 < ZMAX) objs.push({ z: Math.max(z0, ZMIN), z1, key: Math.min(z1, ZMAX), t: 'platform', S });
-      const zs = zOf(S.pos); if (zs > ZMIN && zs < ZMAX) objs.push({ z: zs, t: 'stop' });
+      const zs = zOf(S.pos); if (zs > ZMIN && zs < ZMAX) objs.push({ z: zs, t: stopsAt(i, g.mode) ? 'stop' : 'pass' });
       const zn = zOf(S.pos - 70); if (zn > ZMIN && zn < ZMAX) objs.push({ z: zn, t: 'name', S });
     }
     if (cam.train) { // seen from outside: add our own train (front at g.pos, TRAIN_LEN long)
@@ -640,6 +666,14 @@
         const m1 = project(-1.8, 0.02, o.z), m2 = project(1.8, 0.02, o.z);
         ctx.strokeStyle = '#f2c200'; ctx.lineWidth = Math.max(1, 0.2 * s);
         ctx.beginPath(); ctx.moveTo(m1.x, m1.y); ctx.lineTo(m2.x, m2.y); ctx.stroke();
+      } else if (o.t === 'pass') { // Express passes this station: green PASS board, no stop mark
+        const b = project(-2.6, 1.1, o.z), t = project(-2.6, 2.8, o.z), s = b.s;
+        ctx.strokeStyle = '#333'; ctx.lineWidth = Math.max(1, 0.08 * s);
+        ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(t.x, t.y); ctx.stroke();
+        ctx.fillStyle = '#2ea043'; ctx.fillRect(t.x - 0.6 * s, t.y - 0.4 * s, 1.2 * s, 0.8 * s);
+        ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.max(5, 0.35 * s)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('PASS', t.x, t.y);
+        stats.passDrawn++;
       } else if (o.t === 'train') {
         drawTrain(ZMIN);
       } else if (o.t === 'name') {
@@ -853,12 +887,14 @@
       ctx.fillText(g.msg, W / 2, 82); ctx.globalAlpha = 1;
     }
     if (g.state === 'title') {
+      const ex = g.mode === 'express';
       panel([
-        'Drive the Aozora Line through ' + (STATIONS.length - 1) + ' stations.',
+        { t: (ex ? '   Local      ▶ EXPRESS ◀' : '▶ LOCAL ◀      Express   '), c: ex ? '#ff9f5a' : '#7ee787' },
+        ex ? `Express: ${stopCount('express')} stops (passes ${stopCount('local') - stopCount('express')}), faster limits, tight times.`
+          : `Local: stops at all ${stopCount('local')} stations.`,
         'Obey speed limits, stop on the yellow STOP mark, arrive on time.',
         '↑/W: more power   ↓/S: more brake   N: neutral   Space: EB',
-        'Tip: brake early, then ease off to B1–B3 for a smooth stop.',
-        { t: 'Press Enter (or tap) to start', c: '#ffd33d' },
+        { t: '▲/▼ (or L / E) choose mode · Enter or tap to start', c: '#ffd33d' },
       ], 'AOZORA LINE · Train Driver');
     } else if (g.state === 'arrived') {
       const r = g.lastResult;
@@ -873,13 +909,13 @@
       lines.push({ t: g.seg >= STATIONS.length - 1 ? 'Press Enter for final results' : 'Press Enter to depart', c: '#ffd33d' });
       panel(lines, 'Arrived at ' + r.name);
     } else if (g.state === 'end') {
-      const max = (STATIONS.length - 1) * 2200;
+      const max = stopCount(g.mode) * 2200;
       const pct = g.score / max;
       const rank = pct > 0.85 ? 'S' : pct > 0.7 ? 'A' : pct > 0.5 ? 'B' : pct > 0.3 ? 'C' : 'D';
       const lines = g.results.map((r) => `${r.name}: ${r.failed ? 'overrun' : r.total + ' pts'}`);
       lines.push({ t: `Total ${g.score}  ·  Rank ${rank}`, c: '#7ee787' });
       lines.push({ t: 'Press Enter to play again', c: '#ffd33d' });
-      panel(lines, 'End of the line!');
+      panel(lines, `End of the line! · ${MODE_NAMES[g.mode]}`);
     }
     if (g.paused) {
       panel([
@@ -906,7 +942,7 @@
   }
 
   // Exposed for automated testing: set paused = true, then drive the game with step(dt) and render().
-  const hook = { get state() { return g; }, scene, stats, act, step, render, paused: false, setPaused, sound, STATIONS, LIMITS, GRADES, accel, limitAt, gradeAt, catsBetween };
+  const hook = { get state() { return g; }, scene, stats, act, step, render, paused: false, setPaused, sound, STATIONS, get LIMITS() { return LIMITS; }, GRADES, accel, limitAt, gradeAt, catsBetween, stopsAt };
   window.__train = hook;
   requestAnimationFrame(frame);
 })();
