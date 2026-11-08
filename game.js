@@ -61,6 +61,7 @@
       sched: 0,                   // scheduled arrival
       score: 0, stationScore: 0, overspeedPen: 0, overTimer: 0, cats: 0,
       results: [], msg: '', msgT: 0, timer: 0, failed: false,
+      paused: false,              // player pause (P / Esc / Pause button); only while running
     };
   }
   reset();
@@ -197,6 +198,8 @@
 
     function update(dt) {
       if (!ac) return;
+      // Pausing freezes every sound and the music where it is.
+      if (g.paused) { if (ac.state === 'running') ac.suspend().catch(() => {}); return; }
       if (ac.state === 'suspended') ac.resume().catch(() => {});
       const t = ac.currentTime, kmh = g.v * 3.6, running = g.state === 'running';
       scheduleMusic();
@@ -247,8 +250,15 @@
   })();
 
   // ---------- Input ----------
+  function setPaused(p) {
+    g.paused = p && g.state === 'running';
+    const b = document.getElementById('pause');
+    if (b) b.textContent = g.paused ? '▶ Resume' : '⏸ Pause';
+  }
   function act(a) {
     if (a === 'mute') { sound.toggle(); return; }
+    if (a === 'pause') { setPaused(!g.paused); return; }
+    if (g.paused) { if (a === 'enter') setPaused(false); return; } // only resume while paused
     if (a === 'enter') {
       if (g.state === 'title') { g.state = 'ready'; g.lever = -8; flash('Doors closed. Release brake and power up!', 3); startSegment(); }
       else if (g.state === 'arrived') {
@@ -266,13 +276,15 @@
     else if (a === 'neutral') g.lever = 0;
     else if (a === 'eb') g.lever = -9;
   }
-  const KEYS = { ArrowUp: 'power', KeyW: 'power', ArrowDown: 'brake', KeyS: 'brake', KeyN: 'neutral', Space: 'eb', Enter: 'enter', NumpadEnter: 'enter', KeyM: 'mute' };
+  const KEYS = { ArrowUp: 'power', KeyW: 'power', ArrowDown: 'brake', KeyS: 'brake', KeyN: 'neutral', Space: 'eb', Enter: 'enter', NumpadEnter: 'enter', KeyM: 'mute', KeyP: 'pause', Escape: 'pause' };
   // Browsers only allow audio after a user gesture, so start it on the first key or tap.
   addEventListener('keydown', () => sound.start());
   addEventListener('pointerdown', () => sound.start());
   addEventListener('keydown', (e) => { const a = KEYS[e.code]; if (a) { e.preventDefault(); if (!e.repeat || a !== 'enter') act(a); } });
   document.querySelectorAll('#touch button').forEach((b) => b.addEventListener('pointerdown', (e) => { e.preventDefault(); act(b.dataset.act); }));
-  canvas.addEventListener('pointerdown', () => { if (g.state !== 'running') act('enter'); });
+  canvas.addEventListener('pointerdown', () => { if (g.state !== 'running' || g.paused) act('enter'); });
+  // Switching tabs or apps (or locking the phone) pauses the run so the train does not drive on alone.
+  document.addEventListener('visibilitychange', () => { if (document.hidden) setPaused(true); });
 
   // ---------- Rendering ----------
   // Lateral offset of the track at distance z ahead (approximate curve integration)
@@ -833,6 +845,12 @@
       lines.push({ t: 'Press Enter to play again', c: '#ffd33d' });
       panel(lines, 'End of the line!');
     }
+    if (g.paused) {
+      panel([
+        'The train and the clock are stopped.',
+        { t: 'Press P / Esc, or tap, to resume', c: '#ffd33d' },
+      ], 'PAUSED');
+    }
   }
 
   // ---------- Main loop ----------
@@ -842,7 +860,7 @@
     if (g.state !== 'title' && g.state !== 'end') drawInsets();
     drawDash(); drawOverlay();
   }
-  function step(dt) { update(dt); updateScene(dt); }
+  function step(dt) { if (g.paused) return; update(dt); updateScene(dt); }
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
@@ -852,7 +870,7 @@
   }
 
   // Exposed for automated testing: set paused = true, then drive the game with step(dt) and render().
-  const hook = { get state() { return g; }, scene, stats, act, step, render, paused: false, sound, STATIONS, LIMITS, accel, limitAt, catsBetween };
+  const hook = { get state() { return g; }, scene, stats, act, step, render, paused: false, setPaused, sound, STATIONS, LIMITS, accel, limitAt, catsBetween };
   window.__train = hook;
   requestAnimationFrame(frame);
 })();

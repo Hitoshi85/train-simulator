@@ -1,9 +1,70 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; background: #0d1117; color: #c9d1d9; font-family: system-ui, sans-serif; }
-main { max-width: 960px; margin: 0 auto; padding: 12px; text-align: center; }
-canvas { width: 100%; height: auto; display: block; border-radius: 8px; background: #000; touch-action: none; }
-#touch { display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
-#touch button { font-size: 18px; padding: 12px 18px; border-radius: 8px; border: 1px solid #30363d; background: #21262d; color: #e6edf3; cursor: pointer; user-select: none; }
+/* The whole game (view + controls + help) fits in one screen, so nothing needs scrolling.
+   --chrome is the height taken by everything except the canvas; the canvas keeps its 16:10 shape. */
+main {
+  --chrome: 150px;
+  max-width: 960px; margin: 0 auto; padding: 12px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+canvas {
+  display: block; border-radius: 8px; background: #000; touch-action: none;
+  width: min(100%, (100vh - var(--chrome)) * 1.6);
+  width: min(100%, (100dvh - var(--chrome)) * 1.6);
+  height: auto;
+}
+#touch { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+#touch button {
+  font-size: 18px; min-height: 48px; padding: 10px 18px; border-radius: 10px;
+  border: 1px solid #30363d; background: #21262d; color: #e6edf3; cursor: pointer;
+  user-select: none; -webkit-user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
 #touch button:active { background: #30363d; }
 #touch .eb { background: #6e1b1b; }
-.help { font-size: 14px; opacity: .8; }
+.help { font-size: 14px; opacity: .8; margin: 0; }
+
+/* Touch screens: no keyboard, so drop the key help and use big buttons. */
+@media (hover: none) and (pointer: coarse) {
+  .help { display: none; }
+}
+
+/* Phone held upright: view on top; big driving buttons at the bottom of the screen where thumbs
+   rest (Pause and Sound in a row above them, Brake / N / Power along the bottom edge). */
+@media (orientation: portrait) and (max-width: 700px) {
+  main {
+    --chrome: 290px; height: 100vh; height: 100dvh; justify-content: space-between; padding: 8px;
+    padding-top: max(8px, env(safe-area-inset-top)); padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  #touch { display: grid; grid-template-columns: repeat(6, 1fr); width: 100%; gap: 10px; }
+  #touch button { grid-column: span 2; min-height: 92px; padding: 8px 4px; font-size: 19px; }
+  #touch .util { grid-column: span 3; min-height: 48px; font-size: 16px; order: -1; }
+  #touch [data-act="eb"], #touch [data-act="enter"] { grid-column: span 3; min-height: 76px; order: 0; }
+  #touch [data-act="brake"], #touch [data-act="neutral"], #touch [data-act="power"] { order: 1; }
+}
+
+/* Phone held sideways: view in the middle, controls split for two thumbs
+   (brake side on the left, power side on the right). */
+@media (orientation: landscape) and (max-height: 600px) {
+  main {
+    max-width: none; height: 100vh; height: 100dvh; gap: 8px;
+    padding: 8px max(8px, env(safe-area-inset-right)) 8px max(8px, env(safe-area-inset-left));
+    display: grid; grid-template-columns: minmax(96px, 1fr) auto minmax(96px, 1fr); grid-template-rows: repeat(6, 1fr);
+    grid-template-areas: "brake view power" "brake view power" "neutral view enter" "neutral view enter" "eb view pause" "eb view mute";
+  }
+  canvas {
+    grid-area: view; align-self: center;
+    width: min((100vh - 16px) * 1.6, 100vw - 240px);
+    width: min((100dvh - 16px) * 1.6, 100vw - 240px);
+  }
+  #touch { display: contents; }
+  #touch button { min-height: 44px; height: 100%; padding: 4px; font-size: 17px; }
+  #touch [data-act="brake"] { grid-area: brake; }
+  #touch [data-act="neutral"] { grid-area: neutral; }
+  #touch [data-act="eb"] { grid-area: eb; }
+  #touch [data-act="power"] { grid-area: power; }
+  #touch [data-act="enter"] { grid-area: enter; }
+  #touch [data-act="pause"] { grid-area: pause; }
+  #touch [data-act="mute"] { grid-area: mute; }
+  #touch .util { font-size: 15px; }
+  .help { display: none; }
+}
