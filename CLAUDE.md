@@ -21,7 +21,7 @@ GitHub Pages deploys `index.html`, `game.js`, `style.css` (and `assets/` if pres
    `docs/screens/` and embed it as an image in the PR body; the merge queue looks for it).
    Wait for CI, fix failures until green. Never skip or weaken a test to get green.
 9. The merge queue (`.github/workflows/merge-queue.yml`) merges small green PRs (800 changed lines or
-   fewer) that have a screenshot in the description, oldest first, rebasing each onto `main` and re-running CI before it merges. It
+   fewer) that have a screenshot in the description and a passing project review (see below), oldest first, rebasing each onto `main` and re-running CI before it merges. It
    may rebase your branch: pull before pushing again. Label a PR `hold` to keep it out. Bigger PRs and PRs that
    change `.github/workflows/` are merged by hand only when the owner says so ("m").
 10. After every shipped change, wait for the Pages workflow's **verify-live** job (it checks that
@@ -40,7 +40,14 @@ GitHub Pages deploys `index.html`, `game.js`, `style.css` (and `assets/` if pres
 Keep it working when refactoring; add to it when a new feature needs checking.
 `tests/smoke.spec.js` has an `autopilot()` that drives the full line through `act()`.
 `tests/phone-checks.spec.js` saves phone screenshots to `phone-screenshots/` (a CI artifact) and enforces a
-16 ms median frame-draw budget at phone size. `.github/workflows/review.yml` runs the Claude review agent on each PR.
+16 ms median frame-draw budget at phone size.
+
+## Project review
+
+After opening a PR or pushing to it, tell the coordinator `Review #N please (head <short sha>)`.
+The project's PR reviewer thread reviews the diff and posts a PR comment with a
+`<!-- project-review: PASS|BLOCK <sha> -->` verdict; the merge queue waits for a PASS on the latest
+commit (docs-only PRs skip it). On BLOCK, fix it and ask again. Full process: `docs/REVIEW.md`.
 
 ## Requirements and feedback log
 

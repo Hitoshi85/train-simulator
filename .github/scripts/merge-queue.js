@@ -5,7 +5,8 @@
 //   - behind main      -> rebase it onto main, re-run CI on the new commit, and wait
 //   - checks running   -> wait (the next run picks it up again)
 //   - a check failed   -> skip it for now and move on to the next PR
-//   - all checks green -> squash-merge it, deploy, and start the next run
+//   - all checks green -> needs a passing project review of its head commit (see `reviewState`),
+//                         then squash-merge it, deploy, and start the next run
 // One PR at a time, in the order they were opened, so parallel work never lands untested on main.
 
 const REQUIRED_CHECK = 'Lint and smoke test'; // the job in ci.yml; must be present and green
@@ -21,6 +22,14 @@ const SELF_CHECKS = ['Merge queue'];          // our own job, never wait on it
 const SIZE_IGNORED = [/^package-lock\.json$/, /^docs\/screens\//, /\.(png|jpe?g|gif|webp)$/i];
 // GITHUB_TOKEN may not push or merge workflow changes, and those deserve the owner's eyes anyway.
 const OWNER_ONLY = [/^\.github\/workflows\//];
+
+// Project review: a Claude thread in the project reads each PR's diff and posts a PR comment ending in
+// `<!-- project-review: PASS <head sha> -->` (or BLOCK). Only comments by the owner's account, members
+// or the queue itself count. PRs that only touch docs and images need no review. See docs/REVIEW.md.
+const REVIEW_MARKER = /<!--\s*project-review:\s*(PASS|BLOCK)\s+([0-9a-f]{7,40})\s*-->/i;
+const REVIEW_TRUSTED = ['OWNER', 'MEMBER', 'COLLABORATOR'];
+const REVIEW_BOTS = ['github-actions[bot]'];
+const NO_REVIEW_NEEDED = [/\.md$/i, /^docs\//, /\.(png|jpe?g|gif|webp)$/i];
 
 const BAD = new Set(['failure', 'cancelled', 'timed_out', 'action_required', 'startup_failure', 'stale']);
 
@@ -54,6 +63,23 @@ function eligibility(pr, files, repoFullName) {
     return { ok: false, reason: `${lines} changed lines (limit ${MAX_CHANGED_LINES}), so the owner merges it` };
   }
   return { ok: true, reason: `${lines} changed lines with a screenshot` };
+}
+
+// True when every changed file is documentation or an image, so the PR needs no code review.
+function docsOnly(files) {
+  return files.length > 0 && files.every((f) => NO_REVIEW_NEEDED.some((re) => re.test(f.filename)));
+}
+
+// The project review verdict for a commit, from the PR's comments: 'pass', 'block' or 'missing'.
+// The newest trusted verdict for that exact commit wins, so a new push needs a new review.
+function reviewState(comments, sha) {
+  let state = 'missing';
+  for (const c of comments) {
+    const trusted = REVIEW_TRUSTED.includes(c.author_association) || REVIEW_BOTS.includes(c.user && c.user.login);
+    const m = trusted && REVIEW_MARKER.exec(c.body || '');
+    if (m && sha.startsWith(m[2].toLowerCase())) state = m[1].toUpperCase() === 'PASS' ? 'pass' : 'block';
+  }
+  return state;
 }
 
 // Sums up the check runs on a commit: 'success', 'pending', 'failure' or 'missing'.
@@ -98,17 +124,31 @@ async function run({ github, context, core }) {
     const { data: cmp } = await github.rest.repos.compareCommitsWithBasehead({
       owner, repo, basehead: `${pr.base.ref}...${pr.head.sha}`,
     });
+    const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number: n, per_page: 100 });
+    const review = docsOnly(files) ? 'pass' : reviewState(comments, pr.head.sha);
+    if (review === 'block') { say(`#${n}: the project review found a must-fix problem. Skipping until fixed.`); continue; }
+    if (review === 'missing') { say(`#${n}: waiting for the project review of ${pr.head.sha.slice(0, 7)}.`); continue; }
+
     if (cmp.behind_by > 0) {
       say(`#${n} is ${cmp.behind_by} commit(s) behind main: rebasing.`);
       try {
-        await github.graphql(
+        const res = await github.graphql(
           `mutation($id: ID!, $oid: GitObjectID!) {
              updatePullRequestBranch(input: {pullRequestId: $id, expectedHeadOid: $oid, updateMethod: REBASE}) {
-               pullRequest { number }
+               pullRequest { number headRefOid }
              }
            }`,
           { id: pr.node_id, oid: pr.head.sha },
         );
+        // The rebase only replays the reviewed changes on top of main, so the review carries over.
+        const newSha = res && res.updatePullRequestBranch.pullRequest.headRefOid;
+        if (newSha && newSha !== pr.head.sha && !docsOnly(files)) {
+          await github.rest.issues.createComment({
+            owner, repo, issue_number: n,
+            body: `Rebased onto \`main\` by the merge queue; the project review of ${pr.head.sha.slice(0, 7)} ` +
+              `carries over.\n<!-- project-review: PASS ${newSha} -->`,
+          });
+        }
       } catch (e) {
         say(`#${n} could not be rebased: ${e.message}`);
         await github.rest.issues.addLabels({ owner, repo, issue_number: n, labels: [CONFLICT_LABEL] });
@@ -152,7 +192,7 @@ async function run({ github, context, core }) {
     say(`#${n} merged.`);
     await github.rest.issues.createComment({
       owner, repo, issue_number: n,
-      body: `Merged by the merge queue: checks green on top of \`main\`, ${el.reason}. ` +
+      body: `Merged by the merge queue: checks green on top of \`main\`, project review passed, ${el.reason}. ` +
         `Deploying now; the play link follows once the live site serves this commit.`,
     });
     try {
@@ -167,4 +207,6 @@ async function run({ github, context, core }) {
   await core.summary.addHeading('Merge queue').addList(summary).write();
 }
 
-module.exports = { run, hasScreenshot, changedLines, eligibility, MAX_CHANGED_LINES, checksState, REQUIRED_CHECK };
+module.exports = {
+  run, hasScreenshot, changedLines, eligibility, MAX_CHANGED_LINES, checksState, REQUIRED_CHECK, reviewState, docsOnly,
+};

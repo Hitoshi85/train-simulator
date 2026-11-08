@@ -45,13 +45,33 @@ test('which PRs may merge on their own', () => {
 
 test('check states', () => {
   const ok = (name, id = 1) => ({ id, name, status: 'completed', conclusion: 'success' });
-  expect(q.checksState([ok(q.REQUIRED_CHECK), ok('Claude review', 2)])).toBe('success');
-  expect(q.checksState([ok('Claude review')])).toBe('missing');
-  expect(q.checksState([ok(q.REQUIRED_CHECK), { id: 2, name: 'Claude review', status: 'in_progress' }])).toBe('pending');
+  expect(q.checksState([ok(q.REQUIRED_CHECK), ok('Pages', 2)])).toBe('success');
+  expect(q.checksState([ok('Pages')])).toBe('missing');
+  expect(q.checksState([ok(q.REQUIRED_CHECK), { id: 2, name: 'Pages', status: 'in_progress' }])).toBe('pending');
   expect(q.checksState([{ id: 1, name: q.REQUIRED_CHECK, status: 'completed', conclusion: 'failure' }])).toBe('failure');
   // A passing re-run replaces an earlier failure; the queue's own job is ignored.
   expect(q.checksState([
     { id: 1, name: q.REQUIRED_CHECK, status: 'completed', conclusion: 'failure' }, ok(q.REQUIRED_CHECK, 5),
     { id: 9, name: 'Merge queue', status: 'in_progress' },
   ])).toBe('success');
+});
+
+test('project review verdicts', () => {
+  const sha = 'abc1234def5678abc1234def5678abc1234def56';
+  const c = (body, author_association = 'OWNER', login = 'Hitoshi85') => ({ body, author_association, user: { login } });
+  expect(q.reviewState([], sha)).toBe('missing');
+  expect(q.reviewState([c('Looks good.\n<!-- project-review: PASS abc1234 -->')], sha)).toBe('pass');
+  expect(q.reviewState([c(`Must fix.\n<!-- project-review: BLOCK ${sha} -->`)], sha)).toBe('block');
+  // The newest verdict wins; a verdict for an older commit does not count after a new push.
+  expect(q.reviewState([c('<!-- project-review: BLOCK abc1234 -->'), c('<!-- project-review: PASS abc1234 -->')], sha)).toBe('pass');
+  expect(q.reviewState([c('<!-- project-review: PASS 9999999 -->')], sha)).toBe('missing');
+  // Only the owner, members and the queue itself can pass a PR.
+  expect(q.reviewState([c('<!-- project-review: PASS abc1234 -->', 'NONE', 'stranger')], sha)).toBe('missing');
+  expect(q.reviewState([c('<!-- project-review: PASS abc1234 -->', 'NONE', 'github-actions[bot]')], sha)).toBe('pass');
+});
+
+test('docs-only PRs need no review', () => {
+  expect(q.docsOnly([{ filename: 'REQUIREMENTS.md' }, { filename: 'docs/screens/a.png' }])).toBe(true);
+  expect(q.docsOnly([{ filename: 'REQUIREMENTS.md' }, { filename: 'game.js' }])).toBe(false);
+  expect(q.docsOnly([])).toBe(false);
 });

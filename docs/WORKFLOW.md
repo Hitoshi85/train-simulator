@@ -13,8 +13,10 @@
    oldest first. A PR is in the queue when its description has a screenshot, it changes 800 lines or fewer
    (lock files and images not counted; an `automerge` label lets a bigger one in), it does not
    change `.github/workflows/`, and it has no `hold` label. For the PR at the head of the queue it
+   waits for a passing **project review** of its latest commit (a Claude thread in the project reviews
+   the diff and posts its verdict as a PR comment, see `docs/REVIEW.md`; docs-only PRs skip it),
    rebases onto `main` if needed, re-runs CI on the rebased commit, waits until every check
-   (including **Claude review**) has passed, then squash-merges it and deletes the branch. A PR with
+   has passed, then squash-merges it and deletes the branch. A PR with
    a failing check is skipped until fixed; one that cannot be rebased gets `queue-conflict`.
    The rules live in `.github/scripts/merge-queue.js` (tested in `tests/merge-queue.spec.js`).
 5. **Deploy and live check.** `.github/workflows/pages.yml` re-runs the checks on `main`, publishes
