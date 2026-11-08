@@ -34,6 +34,8 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-latest
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -44,7 +46,58 @@ jobs:
           mkdir _site
           cp index.html game.js style.css _site/
           if [ -d assets ]; then cp -r assets _site/; fi
+          # Lets the post-deploy check (and anyone) see which commit is live.
+          echo "{\"sha\": \"${GITHUB_SHA}\"}" > _site/version.json
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # Confirms the live site really serves this commit and the game starts, then posts the phone link.
+  verify-live:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    env:
+      LIVE_URL: ${{ needs.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait until the live site serves this commit
+        run: |
+          for i in $(seq 1 60); do
+            live=$(curl -fsS -H 'Cache-Control: no-cache' "${LIVE_URL}version.json?t=$(date +%s)" | jq -r .sha || true)
+            if [ "$live" = "$GITHUB_SHA" ]; then echo "Live site serves $GITHUB_SHA"; exit 0; fi
+            echo "Live: ${live:-none}, want $GITHUB_SHA. Retrying in 10 s ($i/60)."
+            sleep 10
+          done
+          echo "::error::The live site did not switch to $GITHUB_SHA within 10 minutes."
+          exit 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Live check (the deployed game loads and runs)
+        run: npx playwright test tests/live.spec.js
+      - name: Post the phone link
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const short = context.sha.slice(0, 7);
+            const link = `${process.env.LIVE_URL}?v=${short}`;
+            await core.summary.addHeading('Live and verified').addRaw(`Play on your phone: ${link}`).write();
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner, repo: context.repo.repo, commit_sha: context.sha,
+            });
+            const pr = prs.find((p) => p.merged_at);
+            if (pr) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo, issue_number: pr.number,
+                body: `Live and verified: the site serves \`${short}\` and the game starts.\n\nPlay on your phone: ${link}`,
+              });
+            }

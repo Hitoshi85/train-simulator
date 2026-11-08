@@ -17,11 +17,18 @@ GitHub Pages deploys `index.html`, `game.js`, `style.css` (and `assets/` if pres
 6. Add or extend a test in `tests/` for new behaviour whenever it can be checked headlessly.
 7. If `game.js` or `style.css` changed, bump `?v=N` on both asset URLs in `index.html` so
    browsers load the new version.
-8. Open the PR, wait for CI, fix failures until green. Never skip or weaken a test to get green.
-9. The owner merges. Do not merge or enable auto-merge unless the owner said so for that PR or label.
-10. After every shipped change (PR merged and the Pages deploy green), always share the latest
+8. Open the PR with a screenshot image in its description, wait for CI, fix failures until green.
+   Never skip or weaken a test to get green.
+9. The merge queue (`.github/workflows/merge-queue.yml`) merges small green PRs (800 changed lines or
+   fewer) that have a screenshot in the description, oldest first, rebasing each onto `main` and re-running CI before it merges. It
+   may rebase your branch: pull before pushing again. Label a PR `hold` to keep it out. Bigger PRs and PRs that
+   change `.github/workflows/` are merged by hand only when the owner says so ("m").
+10. After every shipped change, wait for the Pages workflow's **verify-live** job (it checks that
+   `version.json` on the live site shows the new commit and the game runs), then share the latest
    mobile play link with a cache-busting suffix of the deployed commit's short SHA:
-   `https://hitoshi85.github.io/train-simulator/?v=<short-sha>`
+   `https://hitoshi85.github.io/train-simulator/?v=<short-sha>`. The job also comments it on the PR.
+11. The owner talks only in the project chat; send questions, ready PRs and manual steps through
+   the coordinator, not in your own thread.
 
 ## Test hook
 

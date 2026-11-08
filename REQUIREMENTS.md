@@ -40,12 +40,14 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | W1 | All work runs in cloud sessions, not tied to the owner's computer. | In place |
 | W2 | Before changing the game, ask clarifying questions **one at a time**, each with 3 options and a recommended one. | In place |
 | W3 | Agentic loop: tasks are GitHub issues labelled `task`; the owner approves with `ready`; one thread per issue opens a small PR; CI (ESLint + headless autopilot smoke test) must be green. See [docs/WORKFLOW.md](docs/WORKFLOW.md). | In place |
-| W4 | The owner merges. No merge or auto-merge unless the owner says so for that PR. | In place |
+| W4 | PRs merge on their own through the merge queue when every check is green on top of `main` and the description has a screenshot, for small PRs only: 800 changed lines or fewer, lock files and images not counted (Hitoshi's choice). Bigger PRs wait for "m" unless labelled `automerge`. A `hold` label keeps a PR out; PRs that change `.github/workflows/` still wait for the owner's "m". Replaces "the owner merges". | Done (this PR) |
 | W5 | Merges to `main` deploy to GitHub Pages through the tested workflow. | In place |
-| W6 | After every shipped change, share the latest mobile link with a cache-busting suffix: `https://hitoshi85.github.io/train-simulator/?v=<short commit>`. | In place (repo rule, #13) |
+| W6 | After every shipped change, share the latest mobile link with a cache-busting suffix: `https://hitoshi85.github.io/train-simulator/?v=<short commit>`. Since this PR the deploy workflow checks the live site first (`version.json` shows the new commit and the game starts) and comments the link on the merged PR. | In place (repo rule #13; live check in this PR) |
 | W7 | Keep all requirements and feedback in this file, updated with every change and every piece of feedback. | In place |
 | W8 | Show results (e.g. test runs) in simple tables when asked. | Preference |
 | W9 | Use several focused subagents in parallel for independent parts of a task, keeping token use balanced (few agents, small prompts). | In place |
+| W11 | Merge queue: one PR at a time, oldest first; the queue rebases it onto `main`, re-runs CI, merges when green, deploys, then moves to the next. A PR it cannot rebase gets a `queue-conflict` label and a comment. | Done (this PR) |
+| W12 | Hitoshi talks only in the project chat with one orchestrator; threads send questions, ready PRs and manual steps through it instead of asking in their own thread. | In place |
 | W10 | When asking for approval on backlog items, ask one item at a time with 3 options, and always include an option to remove the item from the backlog without doing it (the issue is closed as not planned). | In place |
 
 ## 2. Shipped changes
@@ -61,7 +63,8 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | 2026-11-07 | 4 new stations (9 stations, about 1 km apart); live front, rear and platform camera insets; original synthesized sound, chimes and background music with mute (M / Sound button). Closes #8 | [#15](https://github.com/Hitoshi85/train-simulator/pull/15) |
 | 2026-11-08 | Phone layout without scrolling in portrait and landscape, bigger touch buttons, help hidden on touch (closes #10); pause with P / Esc / button and auto-pause on tab switch (closes #7) | [#17](https://github.com/Hitoshi85/train-simulator/pull/17) |
 | 2026-11-08 | Uphill and downhill gradients (up to ±25‰) that change acceleration, gradient posts beside the track and a GRADIENT readout on the dashboard; stations are level. Closes #9 | [#18](https://github.com/Hitoshi85/train-simulator/pull/18) |
-| 2026-11-08 | Express mode: pick Local or Express on the title screen; Express passes 4 of the 8 stops, runs a tighter timetable and has higher limits on open track. Closes #11 | (this PR) |
+| 2026-11-08 | Express mode: pick Local or Express on the title screen; Express passes 4 of the 8 stops, runs a tighter timetable and has higher limits on open track. Closes #11 | [#20](https://github.com/Hitoshi85/train-simulator/pull/20) |
+| 2026-11-08 | Merge queue with auto-merge (green + screenshot + 800 lines or fewer, oldest first, rebase and re-test) and a post-deploy live check that posts the phone link | (this PR) |
 
 ## 3. Feedback log
 
@@ -93,6 +96,10 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-08 | Hitoshi said "Merge" for the gradients PR. | Merged #18 once CI was green. |
 | 2026-11-08 | Express build after the backlog review: approved Express mode (#11) with one change, skip about half of the 8 stops instead of just one; keep the tighter timetable, higher limits and the mode choice on the title screen. | Issue #11 updated; built in this PR (R17): Express stops at Kawabe, Momijidai, Shiokaze and Tsukimino. |
 | 2026-11-08 | New shorthand: a message of only "m" means merge the PR. Hitoshi sent "M" for the Express PR. | Express PR rebased onto #17 and #18 and merged once CI was green. |
+| 2026-11-08 | Asked whether the setup is fully agentic; approved all six proposed upgrades (auto-merge on green, merge queue, daily backlog routine, mobile and speed checks in CI, post-deploy check, review agent). | Split across two threads: checks and review agent in #21; auto-merge, merge queue and post-deploy check in this PR. |
+| 2026-11-08 | "Actually don't do 3 but do the others." | Daily backlog routine dropped. |
+| 2026-11-08 | "I only want to respond here or with one orchestrator agent. I don't want to check on each thread." | New rule W12. |
+| 2026-11-08 | Question: which PRs should merge by themselves? (options: small PRs with a screenshot, every PR with a screenshot, only PRs labelled automerge) | Hitoshi first chose every PR with a screenshot, then changed it to small PRs with a screenshot (under about 800 changed lines); built that way (W4). |
 
 ## 4. Open backlog
 
@@ -109,3 +116,4 @@ Removed by the owner on 2026-11-08 (closed as not planned): [#5](https://github.
 - Extra lines.
 - A native iOS version (SwiftUI + SceneKit) of the same original game.
 - CI posting a test-results table on each PR.
+- A daily backlog-grooming routine (proposed 2026-11-08, dropped by Hitoshi).
