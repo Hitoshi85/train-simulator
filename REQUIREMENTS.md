@@ -74,7 +74,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | 2026-11-08 | Hand-painted pastoral look: watercolour sky and clouds, three pastoral scenes, morning-to-evening light along the line, living details (birds, swaying trees and grass, petals, paddies, sailboats, fireflies), repainted stations and train. Preview: [docs/screens/painted-look.png](docs/screens/painted-look.png) | [#19](https://github.com/Hitoshi85/train-simulator/pull/19) |
 | 2026-11-08 | CI phone screenshots and a 16 ms frame-draw budget at phone size on every PR; Claude review agent workflow | [#21](https://github.com/Hitoshi85/train-simulator/pull/21) |
 | 2026-11-08 | Merge queue with auto-merge (green + screenshot + 800 lines or fewer, oldest first, rebase and re-test) and a post-deploy live check that posts the phone link | [#22](https://github.com/Hitoshi85/train-simulator/pull/22) |
-| 2026-11-08 | 3 power and 3 brake notches, departures start on P1; black centre line (cab window pillar) removed; front and rear cameras now show the sea, hills and town on the matching side | This PR |
+| 2026-11-08 | 3 power and 3 brake notches, departures start on P1; black centre line (cab window pillar) removed; front and rear cameras now show the sea, hills and town on the matching side; insets render at a quarter of the screen size so three cameras near a station stay inside the 16 ms phone frame budget | This PR |
 
 ## 3. Feedback log
 

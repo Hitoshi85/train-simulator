@@ -1054,8 +1054,11 @@
 
   // ---------- Camera insets (rendered views from other cameras) ----------
   const INSET_W = 220, INSET_H = Math.round(INSET_W * VIEW_H / W), INSET_X = W - 14 - 8 - INSET_W;
+  // Insets are drawn at INSET_W px wide, so render them at just over that size (not half the
+  // screen): three cameras near a station then fit the 16 ms phone frame budget.
+  const INSET_SCALE = 0.25;
   const insetCanvas = document.createElement('canvas');
-  insetCanvas.width = W / 2; insetCanvas.height = VIEW_H / 2;
+  insetCanvas.width = W * INSET_SCALE; insetCanvas.height = VIEW_H * INSET_SCALE;
   const offCtx = insetCanvas.getContext('2d');
   function insetViews() {
     const views = [
@@ -1072,7 +1075,7 @@
     const views = insetViews();
     views.forEach((v, i) => {
       ctx = offCtx;
-      ctx.setTransform(0.5, 0, 0, 0.5, 0, 0);
+      ctx.setTransform(INSET_SCALE, 0, 0, INSET_SCALE, 0, 0);
       drawWorld(v.cam);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx = mainCtx;
