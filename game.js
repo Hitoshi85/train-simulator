@@ -331,8 +331,40 @@
     const b = document.getElementById('pause');
     if (b) b.textContent = g.paused ? '▶ Resume' : '⏸ Pause';
   }
+  // ---------- Player feedback ----------
+  // The site is static, so feedback goes to GitHub as a prefilled issue from the repo's feedback form
+  // (labelled feedback, so it lands in the backlog and notifies the owner). The game context is filled in.
+  const FEEDBACK_NEW = 'https://github.com/hitoshi85/train-simulator/issues/new';
+  const GAME_VERSION = (() => { try { return new URL(document.currentScript.src).searchParams.get('v') || 'dev'; } catch { return 'dev'; } })();
+  function feedbackContext() {
+    const at = Math.round(g.pos), prev = [...STATIONS].reverse().find((s) => s.pos <= g.pos) || STATIONS[0];
+    const where = g.state === 'title' ? 'title screen' : g.state === 'end' ? 'end of the line'
+      : `${at} m, after ${prev.name}, heading for ${STATIONS[g.seg].name}`;
+    const w = weatherAt(g.pos);
+    return [
+      `Game version: v${GAME_VERSION}`,
+      `Mode: ${MODE_NAMES[g.mode]}`,
+      `Where: ${where}`,
+      `Speed: ${Math.round(g.v * 3.6)} km/h, score ${g.score}`,
+      `Time of day: ${lightAt(g.pos).phase}`,
+      `Weather: ${w.amt > 0 ? `${w.kind} (${Math.round(w.amt * 100)}%)` : 'clear'}`,
+      `Screen: ${innerWidth}x${innerHeight}, ${matchMedia('(pointer: coarse)').matches ? 'touch' : 'mouse/keyboard'}`,
+    ].join('\n');
+  }
+  function feedbackUrl() {
+    const q = new URLSearchParams({ template: 'feedback.yml', title: 'Feedback: ', context: feedbackContext(), device: navigator.userAgent });
+    return `${FEEDBACK_NEW}?${q}`;
+  }
+  function sendFeedback() {
+    setPaused(true); // the train waits while the player writes
+    stats.feedbackOpened++;
+    stats.lastFeedbackUrl = feedbackUrl();
+    if (!hook.paused) window.open(stats.lastFeedbackUrl, '_blank', 'noopener');
+  }
+
   function act(a) {
     if (a === 'mute') { sound.toggle(); return; }
+    if (a === 'feedback') { sendFeedback(); return; }
     if (a === 'pause') { setPaused(!g.paused); return; }
     if (g.paused) { if (a === 'enter') setPaused(false); return; } // only resume while paused
     if (a === 'enter') {
@@ -357,12 +389,15 @@
     else if (a === 'neutral') g.lever = 0;
     else if (a === 'eb') g.lever = EB;
   }
-  const KEYS = { ArrowUp: 'power', KeyW: 'power', ArrowDown: 'brake', KeyS: 'brake', KeyN: 'neutral', Space: 'eb', Enter: 'enter', NumpadEnter: 'enter', KeyM: 'mute', KeyP: 'pause', Escape: 'pause', KeyL: 'local', KeyE: 'express' };
+  const KEYS = { ArrowUp: 'power', KeyW: 'power', ArrowDown: 'brake', KeyS: 'brake', KeyN: 'neutral', Space: 'eb', Enter: 'enter', NumpadEnter: 'enter', KeyM: 'mute', KeyP: 'pause', Escape: 'pause', KeyL: 'local', KeyE: 'express', KeyF: 'feedback' };
   // Browsers only allow audio after a user gesture, so start it on the first key or tap.
   addEventListener('keydown', () => sound.start());
   addEventListener('pointerdown', () => sound.start());
   addEventListener('keydown', (e) => { const a = KEYS[e.code]; if (a) { e.preventDefault(); if (!e.repeat || a !== 'enter') act(a); } });
-  document.querySelectorAll('#touch button').forEach((b) => b.addEventListener('pointerdown', (e) => { e.preventDefault(); act(b.dataset.act); }));
+  // Feedback opens a new tab, which phones only allow from a click (not a pointerdown).
+  document.querySelectorAll('#touch button').forEach((b) => (b.dataset.act === 'feedback'
+    ? b.addEventListener('click', () => act('feedback'))
+    : b.addEventListener('pointerdown', (e) => { e.preventDefault(); act(b.dataset.act); })));
   canvas.addEventListener('pointerdown', () => { if (g.state !== 'running' || g.paused) act('enter'); });
   // Switching tabs or apps (or locking the phone) pauses the run so the train does not drive on alone.
   document.addEventListener('visibilitychange', () => { if (document.hidden) setPaused(true); });
@@ -982,7 +1017,7 @@
     for (let s = Math.ceil(a / CAT_STEP) * CAT_STEP; s < b; s += CAT_STEP) { const c = catAt(s); if (c) out.push(c); }
     return out;
   }
-  const stats = { catsDrawn: 0, frames: 0, trainDrawn: 0, gradePostsDrawn: 0, passDrawn: 0, insets: {}, lastInsets: [], mirrored: 0, trees: 0, birds: 0, fireflies: 0, landmarks: {}, glows: 0, precip: 0 }; // render counters for automated tests
+  const stats = { catsDrawn: 0, frames: 0, trainDrawn: 0, gradePostsDrawn: 0, passDrawn: 0, insets: {}, lastInsets: [], mirrored: 0, trees: 0, birds: 0, fireflies: 0, landmarks: {}, glows: 0, precip: 0, feedbackOpened: 0, lastFeedbackUrl: '' }; // render counters for automated tests
   function drawCat(c, p) {
     const s = p.s * 1.4; // cats drawn a bit larger than life so you can spot them
     if (s < 1.2) return;
@@ -1514,7 +1549,7 @@
   }
 
   // Exposed for automated testing: set paused = true, then drive the game with step(dt) and render().
-  const hook = { get state() { return g; }, scene, stats, act, step, render, renderCam, paused: false, setPaused, sound, STATIONS, get LIMITS() { return LIMITS; }, GRADES, accel, limitAt, gradeAt, catsBetween, lightAt, stopsAt, ROUTE, mapAt, weatherAt,
+  const hook = { get state() { return g; }, scene, stats, act, step, render, renderCam, paused: false, setPaused, sound, STATIONS, get LIMITS() { return LIMITS; }, GRADES, accel, limitAt, gradeAt, catsBetween, lightAt, stopsAt, ROUTE, mapAt, weatherAt, feedbackUrl,
     setWeather(kind, from = 0, to = 1e9) { g.wx = { kind, from, to }; }, // 'rain', 'snow' or 'clear' between two positions
     drawView(view) { drawWorld(view); }, // draw one camera's view full size (for screenshots and tests)
   };

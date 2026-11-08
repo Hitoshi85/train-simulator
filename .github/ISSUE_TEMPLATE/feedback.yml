@@ -9,6 +9,11 @@ body:
       description: What you did, what you saw, and what you expected.
     validations:
       required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Game context
+      description: Filled in by the game's Feedback button (version, mode, where on the line, time of day, weather, screen).
   - type: input
     id: device
     attributes:
