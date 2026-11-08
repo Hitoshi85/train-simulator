@@ -39,7 +39,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | R22 | Real towns in Japan with original art in the painted style: houses with tiled roofs and coastal black pines in the towns, the sea, sailboats and Enoshima island with its lighthouse tower on the coast, temple halls, a vermilion shrine gate, maples and hydrangeas in the Hase hills. Distant landmarks (Mt Fuji across the bay, Enoshima island, the Inamuragasaki cape) are placed by real map bearing, so each camera sees them where they really are (Mt Fuji shows in the rear camera along the coast). Route data (stations, scene zones, map layout, landmarks) lives in one `ROUTE` object so more lines can be added. | Done (#24) |
 | R23 | Weather that changes during the run (Hitoshi's choice): each run picks rain or snow at random, which rolls in partway (after about 3.2 to 5 km) and may clear before the end. Rain: grey overcast sky, rain streaks, drops on the cab glass. Snow: falling flakes and snow settling on the ground, hills and roofs. A notice says when it starts and clears, and the label shows "rain" or "snow". All camera insets show it too. Stays within the 16 ms phone frame budget, also checked at night in rain and snow near a station. Closes #12. | Done (#25) |
 | R24 | Players can send feedback from the game: a 💬 Feedback button (and the F key) pauses the run and opens a prefilled GitHub issue from the repo's feedback form, labelled `feedback`, so it lands in the backlog and GitHub notifies Hitoshi as the repo owner. The game fills in its context (version, Local/Express, where on the line, speed, time of day, weather, screen and browser). Players need a GitHub account (Hitoshi's choice); no token is shipped in the game. | Done (this PR) |
-| R25 | Landscapes recognisably based on the real Fujisawa to Kamakura towns (landmarks, coastline, temples), painted in the existing hand-painted style with original art only (Hitoshi, "Ghibli style"). Within the 16 ms phone frame budget. | Backlog (#30) |
+| R25 | Landscapes recognisably based on the real Fujisawa to Kamakura towns (landmarks, coastline, temples), painted in the existing hand-painted style with original art only (Hitoshi, "Ghibli style"). Within the 16 ms phone frame budget. | On hold (#30, Hitoshi 2026-11-08) |
 | R26 | Random start: each run starts at a random time of day and weather (it can start at night in snow), and the cycle continues from there. Within the 16 ms phone frame budget. | Backlog (#31) |
 
 ### How we work
@@ -133,6 +133,7 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-08 | Question: how should a player's feedback reach the backlog? (options: prefilled GitHub issue link, form service copied into issues daily, serverless relay holding a token) | Hitoshi chose the prefilled GitHub issue (R24). |
 | 2026-11-08 | Question: what should the feedback issue include automatically? (options: game context, only the player's words, context plus a frame snapshot) | Hitoshi chose the game context (R24). |
 | 2026-11-08 | "This can be later": landscapes should be based on the actual towns but in Ghibli style; the starting time of day and weather should be random, so a run can start at night in snow. | Logged as backlog #30 (R25) and #31 (R26); not built yet. |
+| 2026-11-08 | "Hold off on the real-town landscapes for now." | #30 labelled `hold`; R25 on hold. |
 
 ## 4. Open backlog
 
@@ -140,7 +141,7 @@ Add the `ready` label to an issue to start it.
 
 | Issue | Task | Status |
 |---|---|---|
-| [#30](https://github.com/Hitoshi85/train-simulator/issues/30) | Landscapes recognisably based on the real towns, painted style (R25) | Later, waiting for `ready` |
+| [#30](https://github.com/Hitoshi85/train-simulator/issues/30) | Landscapes recognisably based on the real towns, painted style (R25) | On hold (Hitoshi, 2026-11-08) |
 | [#31](https://github.com/Hitoshi85/train-simulator/issues/31) | Random starting time of day and weather (R26) | Later, waiting for `ready` |
 
 Removed by the owner on 2026-11-08 (closed as not planned): [#5](https://github.com/Hitoshi85/train-simulator/issues/5) cat bonus rebalance, [#6](https://github.com/Hitoshi85/train-simulator/issues/6) save best score.
