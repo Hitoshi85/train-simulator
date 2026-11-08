@@ -12,7 +12,7 @@ Current versions (updated automatically after every deploy):
 
 <!-- play-links:start -->
 - **Prod** (stable, promoted with "Ship"): https://hitoshi85.github.io/train-simulator/?v=3a22128 ([prod-1](https://github.com/Hitoshi85/train-simulator/releases/tag/prod-1))
-- **Dev** (latest main, may be unfinished, marked "DEV"): https://hitoshi85.github.io/train-simulator/dev/?v=ffc1cab
+- **Dev** (latest main, may be unfinished, marked "DEV"): https://hitoshi85.github.io/train-simulator/dev/?v=aa99d03
 <!-- play-links:end -->
 
 A tiny, original train-driving game for the browser. Plain HTML/CSS/JS, no build step.
