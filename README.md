@@ -4,7 +4,16 @@ A tiny, original train-driving game for the browser. Plain HTML/CSS/JS, no build
 
 ## Play
 
-Open `index.html` in any modern browser, or play the GitHub Pages build (deployed from `main` by `.github/workflows/pages.yml`).
+Open `index.html` in any modern browser, or play the web builds (links updated automatically after every deploy):
+
+<!-- play-links:start -->
+- **Prod** (stable, promoted with "Ship"): https://hitoshi85.github.io/train-simulator/?v=e783b5f
+- **Dev** (latest main, may be unfinished, marked "DEV"): https://hitoshi85.github.io/train-simulator/dev/
+<!-- play-links:end -->
+
+Every merge to `main` goes to **dev** only. Typing "Ship" in the project chat promotes the version dev
+serves to **prod** as a tagged GitHub release (`prod-1`, `prod-2`, …), so a rollback is one click.
+Both are run by `.github/workflows/pages.yml`; see [docs/WORKFLOW.md](docs/WORKFLOW.md).
 
 ## How to drive
 

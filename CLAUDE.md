@@ -16,7 +16,8 @@ GitHub Pages deploys `index.html`, `game.js`, `style.css` (and `assets/` if pres
    Locally, Chromium is usually preinstalled; in CI the workflow installs it.
 6. Add or extend a test in `tests/` for new behaviour whenever it can be checked headlessly.
 7. If `game.js` or `style.css` changed, bump `?v=N` on both asset URLs in `index.html` so
-   browsers load the new version.
+   browsers load the new version. (The Pages build also rewrites them to `?v=<commit>` and adds a
+   reload-on-new-deploy check, see `.github/scripts/build-site.sh`.)
 8. Open the PR with a screenshot of the game that highlights the new feature (commit it under
    `docs/screens/` and embed it as an image in the PR body; the merge queue looks for it).
    Wait for CI, fix failures until green. Never skip or weaken a test to get green.
@@ -24,10 +25,13 @@ GitHub Pages deploys `index.html`, `game.js`, `style.css` (and `assets/` if pres
    fewer) that have a screenshot in the description and a passing project review (see below), oldest first, rebasing each onto `main` and re-running CI before it merges. It
    may rebase your branch: pull before pushing again. Label a PR `hold` to keep it out. Bigger PRs and PRs that
    change `.github/workflows/` are merged by hand only when the owner says so ("m").
-10. After every shipped change, wait for the Pages workflow's **verify-live** job (it checks that
-   `version.json` on the live site shows the new commit and the game runs), then share the latest
-   mobile play link with a cache-busting suffix of the deployed commit's short SHA:
-   `https://hitoshi85.github.io/train-simulator/?v=<short-sha>`. The job also comments it on the PR.
+10. Merges to `main` deploy to **dev** only (`https://hitoshi85.github.io/train-simulator/dev/`). After every
+   shipped change, wait for the Pages workflow's **verify-live** job (it checks that `version.json` on both
+   live sites shows the expected commit and the game runs), then share the latest dev link with a
+   cache-busting suffix of the deployed commit's short SHA: `.../train-simulator/dev/?v=<short-sha>`.
+   When the owner says "Ship", run `pages.yml` with action `ship` (promotes what dev serves to prod at
+   `https://hitoshi85.github.io/train-simulator/` as release `prod-N`) and share the prod link the same way;
+   action `rollback` goes back to an earlier `prod-N`. README.md always lists the current links.
 11. The owner talks only in the project chat; send questions, ready PRs and manual steps through
    the coordinator, not in your own thread.
 
