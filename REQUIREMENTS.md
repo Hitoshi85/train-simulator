@@ -55,7 +55,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | W10 | When asking for approval on backlog items, ask one item at a time with 3 options, and always include an option to remove the item from the backlog without doing it (the issue is closed as not planned). | In place |
 | W11 | With each PR, share a screenshot of the game that highlights the new feature. | In place (2026-11-08) |
 | W12 | Automatic phone and speed checks on every PR: CI takes phone screenshots (portrait 390×844 and landscape 844×390, title and mid-run; artifact `phone-screenshots`) and fails a PR if the median time to draw one frame at phone size is over 16 ms (60 fps). Frame times appear in the CI job summary. | In place (#21) |
-| W13 | An automated review agent (Claude Code GitHub Action, check "Claude review") reviews every PR for bugs, posts inline and summary comments, and fails the check only for a must-fix problem. Needs a `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` repo secret; skipped (green) until one is added. | Workflow in place (#21); sign-in deferred by Hitoshi, reviews skip until a secret is added |
+| W13 | PR review inside the project, no separate setup or API key: a Claude "PR reviewer" thread reviews only the diff of each PR and posts one comment with a `project-review: PASS/BLOCK <sha>` verdict. The merge queue waits for a PASS on the latest commit (a rebase by the queue carries it over); BLOCK keeps the PR out until fixed. Docs-only PRs skip the review. Hitoshi does not review small PRs. Process: `docs/REVIEW.md`. | Built (this PR); the old API-key review workflow is removed |
 | W14 | Merge queue: one PR at a time, oldest first; the queue rebases it onto `main`, re-runs CI, merges when green, deploys, then moves to the next. A PR it cannot rebase gets a `queue-conflict` label and a comment. | Done (#22) |
 | W15 | Hitoshi talks only in the project chat with one orchestrator; threads send questions, ready PRs and manual steps through it instead of asking in their own thread. | In place |
 
@@ -79,6 +79,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | 2026-11-08 | 3 power and 3 brake notches, departures start on P1; black centre line (cab window pillar) removed; front and rear cameras now show the sea, hills and town on the matching side; insets render at a quarter of the screen size so three cameras near a station stay inside the 16 ms phone frame budget | This PR |
 | 2026-11-08 | Real towns in Japan: the line now follows the seaside line from Fujisawa to Kamakura via Enoshima (real station names, kanji boards), scenery by town (towns, pine woods, coast, temple hills), and Mt Fuji, Enoshima island and the Inamuragasaki cape placed by map bearing in every camera. Preview: [docs/screens/real-towns.png](docs/screens/real-towns.png) | [#24](https://github.com/Hitoshi85/train-simulator/pull/24) |
 | 2026-11-08 | Morning to night along the line, with rain or snow rolling in partway (random each run) and clearing; night lights; also in every camera inset; phone frame check at night in rain and snow. Closes #12. Preview: [docs/screens/time-and-weather.png](docs/screens/time-and-weather.png) | [#25](https://github.com/Hitoshi85/train-simulator/pull/25) |
+| 2026-11-08 | In-project PR review: a Claude thread reviews each PR's diff and posts a verdict; the merge queue waits for a PASS. The API-key review workflow is removed. Process: [docs/REVIEW.md](docs/REVIEW.md) | this PR |
 
 ## 3. Feedback log
 
@@ -125,6 +126,8 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-08 | Hitoshi dropped the bullet train and course select for now ("Don't do 4 for now", "Don't do 3 either"). | Not planned for now; the route data is still kept in one object so more lines are easy later. |
 | 2026-11-08 | Question: which real line should the 9 stations follow? (options: seaside line Fujisawa to Kamakura via Enoshima, mountain line Odawara to Gora, city corridor Tokyo to Yokohama) | Hitoshi chose the seaside line; built in #24 (R4, R9, R22). |
 | 2026-11-08 | Question: how should day, night, rain and snow be chosen? (options: pick before each run, random each run, change during the run) | Hitoshi chose change during the run: morning to evening to night, with rain or snow rolling in partway. Built in #25 (R19, R23), closes #12. |
+| 2026-11-08 | "Review agent but within the project and not a separate setup." | Replaces the API-key review workflow with a Claude reviewer thread in the project (W13). |
+| 2026-11-08 | Question: how should auto-merge wait for the review? (options: queue waits for a passing review of the latest commit, every PR starts on hold, advice only). Hitoshi: "I don't want to review small PRs for dev." | Built the first option: the reviewer thread, not Hitoshi, reviews; small PRs still merge on their own (W13). |
 
 ## 4. Open backlog
 
@@ -142,4 +145,3 @@ Removed by the owner on 2026-11-08 (closed as not planned): [#5](https://github.
 - A native iOS version (SwiftUI + SceneKit) of the same original game.
 - CI posting a test-results table on each PR.
 - A daily backlog-grooming routine (proposed 2026-11-08, dropped by Hitoshi).
-- Turn on the Claude review agent: add a `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) or `ANTHROPIC_API_KEY` repo secret (deferred by Hitoshi, 2026-11-08).

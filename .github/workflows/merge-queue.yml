@@ -4,14 +4,18 @@ name: Merge queue
 # A PR qualifies when it is small (800 changed lines or fewer, lock files and images not counted)
 # and has a screenshot in its description (see .github/scripts/merge-queue.js),
 # does not change workflow files, and has no `hold` label. Others wait for the owner.
+# It also needs a passing project review of its latest commit (a PR comment from the project's
+# Claude reviewer thread, see docs/REVIEW.md); PRs that only touch docs and images skip the review.
 # The script rebases the PR at the head of the queue onto main, re-runs CI, merges, deploys,
 # then moves on to the next PR. One-time setup: see docs/WORKFLOW.md.
 on:
   pull_request_target:
     types: [opened, reopened, edited, labeled, unlabeled, ready_for_review, synchronize]
   workflow_run:
-    workflows: [CI, Claude review]
+    workflows: [CI]
     types: [completed]
+  issue_comment: # a project review verdict was posted
+    types: [created]
   push:
     branches: [main]
   schedule:
