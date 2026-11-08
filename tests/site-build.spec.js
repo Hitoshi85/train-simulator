@@ -2,7 +2,7 @@
 // _site-test/ by .github/scripts/build-site.sh before the tests start (see playwright.config.js).
 // Checks both copies load and run, say which site and commit they are, and stay fresh on phones:
 // versioned asset URLs, and a reload onto a newer deploy without a hard refresh.
-// Dev and prod look identical in the game (Hitoshi's choice), so only version.json tells them apart.
+// Dev shows a small "DEV <sha>" tag and DEV in the page title; prod is unmarked (Hitoshi's choice).
 const { test, expect } = require('@playwright/test');
 
 const SITES = [{ env: 'prod', dir: '/_site-test/' }, { env: 'dev', dir: '/_site-test/dev/' }];
@@ -27,6 +27,14 @@ for (const site of SITES) {
       await page.waitForFunction(() => window.__train && window.__train.stats.frames > 2, null, { timeout: 15000 });
       await page.waitForTimeout(500); // the freshness check has answered: same build, so no reload
       expect(page.url()).toMatch(/index\.html$/);
+      const badge = page.locator('#env-badge');
+      if (site.env === 'dev') {
+        await expect(badge).toHaveText(`DEV ${short}`);
+        await expect(page).toHaveTitle(new RegExp(`^DEV ${short} · `));
+      } else {
+        await expect(badge).toHaveCount(0);
+        await expect(page).not.toHaveTitle(/DEV/);
+      }
       expect(errors).toEqual([]);
     });
 

@@ -21,7 +21,7 @@
    The rules live in `.github/scripts/merge-queue.js` (tested in `tests/merge-queue.spec.js`).
 5. **Deploy to dev, Ship to prod.** `.github/workflows/pages.yml` serves two copies of the game on
    one Pages site: **prod** at `https://hitoshi85.github.io/train-simulator/` and **dev** at
-   `https://hitoshi85.github.io/train-simulator/dev/`. A merge to `main`
+   `https://hitoshi85.github.io/train-simulator/dev/` (marked with a "DEV <commit>" tag and title). A merge to `main`
    re-runs the checks and updates dev only; prod is rebuilt from the `prod` git tag. Each site has a
    `version.json` with its commit. The build (`.github/scripts/build-site.sh`) loads `game.js` and
    `style.css` as `?v=<commit>` and adds a tiny check that reloads the page once when `version.json`

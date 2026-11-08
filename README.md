@@ -8,7 +8,7 @@ Open `index.html` in any modern browser, or play the web builds (links updated a
 
 <!-- play-links:start -->
 - **Prod** (stable, promoted with "Ship"): https://hitoshi85.github.io/train-simulator/?v=e783b5f
-- **Dev** (latest main, may be unfinished): https://hitoshi85.github.io/train-simulator/dev/
+- **Dev** (latest main, may be unfinished, marked "DEV"): https://hitoshi85.github.io/train-simulator/dev/
 <!-- play-links:end -->
 
 Every merge to `main` goes to **dev** only. Typing "Ship" in the project chat promotes the version dev

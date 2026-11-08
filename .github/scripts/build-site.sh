@@ -42,7 +42,17 @@ copy_game() { # <src> <sha> <dir> <env> <tag>
   grep -q "style.css?v=${short}" "$html" || { echo "style.css not versioned in $html" >&2; exit 1; }
 }
 
+# The dev copy says it is dev: a small "DEV <sha>" tag at the top centre (it ignores taps, so it
+# never gets in the way of the touch controls) and "DEV" at the start of the page title.
+mark_dev() { # <dir> <sha>
+  local html="$1/index.html" short=${2:0:7}
+  local badge='<div id="env-badge" style="position:fixed;top:4px;left:50%;transform:translateX(-50%);z-index:9999;pointer-events:none;padding:2px 8px;border-radius:6px;background:#d6336c;color:#fff;font:700 12px/1.4 system-ui,sans-serif;letter-spacing:.08em;opacity:.9">DEV '"$short"'</div>'
+  sed -i "s@</body>@${badge}\n</body>@; s@<title>@<title>DEV ${short} · @" "$html"
+  grep -q 'id="env-badge"' "$html" && grep -q "<title>DEV ${short}" "$html" || { echo "DEV mark not added to $html" >&2; exit 1; }
+}
+
 rm -rf "$out"
 copy_game "$prod_src" "$prod_sha" "$out" prod "$prod_tag"
 copy_game "$dev_src" "$dev_sha" "$out/dev" dev ""
+mark_dev "$out/dev" "$dev_sha"
 echo "Built $out: prod ${prod_sha:0:7}${prod_tag:+ ($prod_tag)}, dev ${dev_sha:0:7}"

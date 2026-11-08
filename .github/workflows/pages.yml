@@ -203,7 +203,7 @@ jobs:
           repo="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
           block=$(printf '%s\n' '<!-- play-links:start -->' \
             "- **Prod** (stable, promoted with \"Ship\"): ${prod_link} ([${PROD_TAG}](${repo}/releases/tag/${PROD_TAG}))" \
-            "- **Dev** (latest main, may be unfinished): ${dev_link}" \
+            "- **Dev** (latest main, may be unfinished, marked \"DEV\"): ${dev_link}" \
             '<!-- play-links:end -->')
           BLOCK="$block" perl -0pi -e 's/<!-- play-links:start -->.*?<!-- play-links:end -->/$ENV{BLOCK}/s' README.md
           { echo "## Live and verified"; echo "$block" | sed '1d;$d'; } >> "$GITHUB_STEP_SUMMARY"
