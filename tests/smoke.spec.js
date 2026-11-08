@@ -397,20 +397,56 @@ test('Express mode passes about half the stops with a tighter timetable and high
   for (const r of run.results) expect(r.timePts, `${r.name} on time`).toBeGreaterThan(0);
 });
 
-test('painted pastoral scenes with light that shifts from morning to evening', async ({ page }) => {
+test('painted scenes with light that shifts from morning through evening to night', async ({ page }) => {
   const r = await page.evaluate(() => {
     const T = window.__train;
     T.paused = true;
     T.act('enter');
+    T.setWeather('clear');
     const sky = () => { const d = document.getElementById('game').getContext('2d').getImageData(300, 40, 1, 1).data; return [d[0], d[1], d[2]]; };
-    T.state.pos = 0; T.render(); const morning = sky();
-    T.state.pos = 8500; T.render(); const evening = sky();
     const end = T.STATIONS[T.STATIONS.length - 1].pos;
-    return { morning, evening, phases: [0, end / 2, end].map((p) => T.lightAt(p).phase), scene: T.scene.cur };
+    T.state.pos = 0; T.render(); const morning = sky();
+    T.state.pos = end * 0.76; T.render(); const evening = sky();
+    T.state.pos = end; const g0 = T.stats.glows; T.render(); const night = sky();
+    return { morning, evening, night, glows: T.stats.glows - g0, phases: [0, end / 2, end * 0.76, end].map((p) => T.lightAt(p).phase), scene: T.scene.cur };
   });
   expect(['town', 'pines', 'seaside', 'temple']).toContain(r.scene);
-  expect(r.phases).toEqual(['morning', 'midday', 'evening']);
-  expect(r.evening[0] - r.evening[2]).toBeGreaterThan(r.morning[0] - r.morning[2]); // warmer sky at the end of the line
+  expect(r.phases).toEqual(['morning', 'midday', 'evening', 'night']);
+  expect(r.evening[0] - r.evening[2]).toBeGreaterThan(r.morning[0] - r.morning[2]); // warmer sky in the evening
+  expect(r.night.reduce((a, b) => a + b)).toBeLessThan(r.morning.reduce((a, b) => a + b) / 2); // dark night sky
+  expect(r.glows, 'windows, lamps and headlights shine at night').toBeGreaterThan(0);
+});
+
+test('rain or snow rolls in partway along the run, in the cab and every camera', async ({ page }) => {
+  const r = await page.evaluate(() => {
+    const T = window.__train;
+    T.paused = true;
+    T.act('enter');
+    const wx = T.state.wx, end = T.STATIONS[T.STATIONS.length - 1].pos;
+    const picked = { kind: wx.kind, from: wx.from, startClear: T.weatherAt(0).amt, peak: T.weatherAt(wx.from + 500).amt };
+    const pixel = (x, y) => [...document.getElementById('game').getContext('2d').getImageData(x, y, 1, 1).data].slice(0, 3);
+    const look = (kind) => {
+      T.setWeather(kind, 1000, end);
+      T.state.pos = 2000; T.state.seg = 3;
+      const p0 = T.stats.precip; T.render();
+      return { precip: T.stats.precip - p0, sky: pixel(300, 40), ground: pixel(200, 420), label: T.weatherAt(2000).amt };
+    };
+    const clear = look('clear'), rain = look('rain'), snow = look('snow');
+    T.state.state = 'running'; T.setWeather('rain', 2100, end); T.state.v = 20; T.state.lever = 0;
+    for (let i = 0; i < 200; i++) T.step(0.05);
+    return { picked, clear, rain, snow, msg: T.state.msg, insets: T.stats.lastInsets.length };
+  });
+  expect(['rain', 'snow']).toContain(r.picked.kind);
+  expect(r.picked.from).toBeGreaterThan(3000); // starts partway, never at the first stations
+  expect(r.picked.startClear).toBe(0);
+  expect(r.picked.peak).toBe(1);
+  expect(r.clear.precip).toBe(0);
+  expect(r.rain.precip).toBeGreaterThan(170); // cab view plus the camera insets
+  expect(r.snow.precip).toBeGreaterThan(170);
+  const sum = (c) => c[0] + c[1] + c[2], sat = (c) => Math.max(...c) - Math.min(...c);
+  expect(sat(r.rain.sky)).toBeLessThan(sat(r.clear.sky)); // grey overcast sky
+  expect(sum(r.snow.ground)).toBeGreaterThan(sum(r.clear.ground) + 60); // snow settles on the ground
+  expect(r.msg).toBe('Rain is moving in');
 });
 
 test('living world: trees, birds and evening fireflies are drawn', async ({ page }) => {

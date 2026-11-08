@@ -113,7 +113,19 @@
       score: 0, stationScore: 0, overspeedPen: 0, overTimer: 0, cats: 0,
       results: [], msg: '', msgT: 0, timer: 0, failed: false,
       paused: false,              // player pause (P / Esc / Pause button); only while running
+      wx: pickWeather(), wxSaid: 0, // this run's weather (see weatherAt)
     };
+  }
+  // ---------- Weather: rain or snow rolls in partway along the run, then may clear ----------
+  const WX_RAMP = 400; // metres over which it sets in and clears
+  function pickWeather() {
+    const end = STATIONS[STATIONS.length - 1].pos, from = 3200 + Math.random() * 1800;
+    return { kind: Math.random() < 0.5 ? 'rain' : 'snow', from, to: Math.min(end + WX_RAMP, from + 2400 + Math.random() * 3000) };
+  }
+  // How heavy the weather is at a position: 0 = clear, 1 = full rain or snow.
+  function weatherAt(pos, wx = g.wx) {
+    const amt = wx.kind === 'clear' ? 0 : Math.max(0, Math.min(1, (pos - wx.from) / WX_RAMP, (wx.to - pos) / WX_RAMP));
+    return { kind: wx.kind, amt };
   }
   reset();
   setMode('local');
@@ -158,6 +170,9 @@
     const before = g.pos;
     g.pos += g.v * dt;
     g.cats += catsBetween(before, g.pos).length;
+    const wx = weatherAt(g.pos);
+    if (g.wxSaid === 0 && wx.amt > 0.05) { g.wxSaid = 1; flash(wx.kind === 'rain' ? 'Rain is moving in' : 'Snow is starting to fall', 2.5); }
+    if (g.wxSaid === 1 && wx.amt === 0 && g.pos > g.wx.to) { g.wxSaid = 2; flash('The sky is clearing', 2); }
     // Passing a station without stopping (Express): no judging, just a note.
     for (let i = 1; i < g.seg; i++) {
       if (!g.passed.includes(i) && before < STATIONS[i].pos && g.pos >= STATIONS[i].pos) {
@@ -406,24 +421,40 @@
   const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
   const rgb = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
   const LINE_LEN = STATIONS[STATIONS.length - 1].pos;
-  const LIGHT = [ // keyframes along the line, 0 = first station, 1 = last
-    { at: 0, top: '#7fa9dc', mid: '#c4d8ee', low: '#fbdcc4', sun: '#fff0d4', haze: '#dde3ec', tint: '#ffd2bc', sunX: 0.2, sunY: 0.66, sunR: 30, tintA: 0.08, warm: 0.4 },
-    { at: 0.4, top: '#3b82d6', mid: '#86bdea', low: '#e6f3f8', sun: '#fffbea', haze: '#d2e5f1', tint: '#ffffff', sunX: 0.42, sunY: 0.14, sunR: 24, tintA: 0, warm: 0 },
-    { at: 0.62, top: '#3b82d6', mid: '#86bdea', low: '#e6f3f8', sun: '#fffbea', haze: '#d2e5f1', tint: '#ffffff', sunX: 0.58, sunY: 0.16, sunR: 24, tintA: 0, warm: 0 },
-    { at: 1, top: '#4d5a9a', mid: '#e3958c', low: '#ffcf86', sun: '#ffb055', haze: '#efbfa0', tint: '#ff9447', sunX: 0.8, sunY: 0.74, sunR: 40, tintA: 0.15, warm: 1 },
+  const LIGHT = [ // keyframes along the line, 0 = first station, 1 = last: morning, midday, evening, night
+    { at: 0, top: '#7fa9dc', mid: '#c4d8ee', low: '#fbdcc4', sun: '#fff0d4', haze: '#dde3ec', tint: '#ffd2bc', sunX: 0.2, sunY: 0.66, sunR: 30, tintA: 0.08, warm: 0.4, night: 0 },
+    { at: 0.3, top: '#3b82d6', mid: '#86bdea', low: '#e6f3f8', sun: '#fffbea', haze: '#d2e5f1', tint: '#ffffff', sunX: 0.42, sunY: 0.14, sunR: 24, tintA: 0, warm: 0, night: 0 },
+    { at: 0.5, top: '#3b82d6', mid: '#86bdea', low: '#e6f3f8', sun: '#fffbea', haze: '#d2e5f1', tint: '#ffffff', sunX: 0.58, sunY: 0.16, sunR: 24, tintA: 0, warm: 0, night: 0 },
+    { at: 0.76, top: '#4d5a9a', mid: '#e3958c', low: '#ffcf86', sun: '#ffb055', haze: '#efbfa0', tint: '#ff9447', sunX: 0.8, sunY: 0.74, sunR: 40, tintA: 0.15, warm: 1, night: 0 },
+    { at: 1, top: '#0b1430', mid: '#1c2a52', low: '#3b4270', sun: '#eef2ff', haze: '#2c3558', tint: '#16204a', sunX: 0.3, sunY: 0.3, sunR: 13, tintA: 0.45, warm: 0.15, night: 1 },
   ];
   function lightAt(pos) {
     const u = Math.max(0, Math.min(1, pos / LINE_LEN));
     let i = 0;
     while (i < LIGHT.length - 2 && u > LIGHT[i + 1].at) i++;
     const A = LIGHT[i], B = LIGHT[i + 1], t = (u - A.at) / (B.at - A.at);
-    const L = { u, phase: u < 0.25 ? 'morning' : u < 0.72 ? 'midday' : 'evening' };
+    const L = { u, phase: u < 0.2 ? 'morning' : u < 0.6 ? 'midday' : u < 0.87 ? 'evening' : 'night', wet: 0, snowy: 0 };
     for (const k of ['top', 'mid', 'low', 'sun', 'haze', 'tint']) L[k] = mix(hex(A[k]), hex(B[k]), t);
-    for (const k of ['sunX', 'sunY', 'sunR', 'tintA', 'warm']) L[k] = A[k] + (B[k] - A[k]) * t;
+    for (const k of ['sunX', 'sunY', 'sunR', 'tintA', 'warm', 'night']) L[k] = A[k] + (B[k] - A[k]) * t;
     return L;
   }
+  // Overcast light under rain or snow: a grey sky, a dimmed sun, colder colours.
+  function weatherLight(L, wx) {
+    const a = wx.amt;
+    if (a <= 0) return L;
+    const grey = mix(hex(wx.kind === 'snow' ? '#c4cad6' : '#7a8592'), [24, 28, 40], L.night * 0.85);
+    for (const k of ['top', 'mid', 'low', 'haze']) L[k] = mix(L[k], grey, a * 0.7);
+    L.sun = mix(L.sun, grey, a * 0.6); L.tint = mix(L.tint, grey, a); L.tintA += a * 0.1 * (1 - L.night);
+    L.sunR *= 1 - a * 0.3; L.warm *= 1 - a * 0.7;
+    if (wx.kind === 'snow') L.snowy = a; else L.wet = a;
+    return L;
+  }
+  const SNOW = [238, 242, 248];
   let light = lightAt(0);
-  const lit = (c, k = 1) => mix(mix(hex(c), light.tint, light.tintA * 0.7 * k), light.sun, 0.08 * light.warm * k);
+  const lit = (c, k = 1) => {
+    const v = mix(mix(hex(c), light.tint, light.tintA * 0.7 * k), light.sun, 0.08 * light.warm * k);
+    return light.snowy ? mix(v, mix(SNOW, light.tint, light.tintA), 0.3 * light.snowy * k) : v;
+  };
 
   const CLOUDS = Array.from({ length: 7 }, (_, i) => ({
     x: hash(i + 40) * 1400, y: 30 + hash(i + 41) * 60, r: 13 + hash(i + 42) * 20,
@@ -442,7 +473,12 @@
     const grd = ctx.createLinearGradient(0, 0, 0, HORIZON);
     grd.addColorStop(0, rgb(L.top)); grd.addColorStop(0.55, rgb(L.mid)); grd.addColorStop(1, rgb(L.low));
     ctx.fillStyle = grd; ctx.fillRect(0, 0, W, HORIZON + 2);
-    // sun and its soft glow
+    if (L.night > 0.05) { // stars, hidden by rain and snow clouds
+      ctx.fillStyle = `rgba(255,250,235,${(L.night * (1 - L.wet - L.snowy) * 0.9).toFixed(2)})`; ctx.beginPath();
+      for (let i = 0; i < 70; i++) { const r = 0.8 + hash(i + 300) * 1.4; ctx.rect(hash(i + 200) * W, hash(i + 250) * HORIZON * 0.9, r, r); }
+      ctx.fill();
+    }
+    // sun (or moon) and its soft glow
     const sx = W * L.sunX, sy = HORIZON * L.sunY, R = L.sunR;
     const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, R * 5);
     glow.addColorStop(0, rgb(L.sun, 0.85)); glow.addColorStop(0.25, rgb(L.sun, 0.3)); glow.addColorStop(1, rgb(L.sun, 0));
@@ -450,8 +486,9 @@
     ctx.fillStyle = rgb(mix(L.sun, [255, 255, 255], 0.4)); ctx.beginPath(); ctx.arc(sx, sy, R, 0, 7); ctx.fill();
     drawFuji(L, pan);
     // towering summer clouds: a shadowed mass, then sunlit puffs leaning toward the sun
-    const shade = mix(mix(L.mid, [150, 150, 185], 0.35), L.low, 0.25);
-    const bright = mix([255, 255, 255], L.sun, 0.25 + 0.45 * L.warm);
+    const shade = mix(mix(L.mid, mix([150, 150, 185], L.top, L.night * 0.8), 0.35), L.low, 0.25);
+    const dim = Math.min(0.85, L.night * 0.8 + (L.wet + L.snowy) * 0.7); // grey rain clouds, dark night clouds
+    const bright = mix(mix([255, 255, 255], L.sun, 0.25 + 0.45 * L.warm), mix(L.mid, L.haze, 0.5), dim);
     const lean = L.sunX < 0.5 ? -1 : 1;
     for (const c of CLOUDS) {
       const x = ((c.x + now * c.sp + pan * 0.3) % 1400 + 1400) % 1400 - 220, r = c.r;
@@ -509,7 +546,7 @@
   // `fall` lowers the ridge to the sea on the right.
   function drawHills(L, pan, layers, fall) {
     for (const [col, hz, base, amp, f, ph, par, bumps] of layers) {
-      const c = mix(lit(col), L.haze, hz);
+      const c = mix(mix(lit(col), lit('#eef2f8'), L.snowy * 0.4), L.haze, hz);
       const pts = [];
       for (let x = -12; x <= W + 12; x += 12) {
         const wx = x + pan * par;
@@ -584,9 +621,9 @@
   }
   function drawGround(name, now, L, ZMIN) {
     // ground, hazier in the distance
-    const [g0, g1] = GROUND[name];
+    const [g0, g1] = GROUND[name], gl = (c) => mix(lit(c), lit('#f4f6fa'), L.snowy * 0.6); // snow settles on the ground
     const grd = ctx.createLinearGradient(0, HORIZON, 0, VIEW_H);
-    grd.addColorStop(0, rgb(mix(lit(g0), L.haze, 0.35))); grd.addColorStop(0.25, rgb(lit(g0))); grd.addColorStop(1, rgb(lit(g1)));
+    grd.addColorStop(0, rgb(mix(gl(g0), L.haze, 0.35))); grd.addColorStop(0.25, rgb(gl(g0))); grd.addColorStop(1, rgb(gl(g1)));
     ctx.fillStyle = grd; ctx.fillRect(0, HORIZON, W, VIEW_H - HORIZON);
     { // brushy meadow patches, lighter and darker greens
       const [lo, hi] = span(320), light1 = rgb(mix(lit(g0), L.sun, 0.25), 0.35), dark1 = rgb(mix(lit(g1), [30, 60, 30], 0.25), 0.3);
@@ -715,8 +752,9 @@
     ctx.fillStyle = rgb(lit('#5a4434'));
     for (const px of [0, w / 3, (2 * w) / 3, w]) ctx.fillRect(x0 + px * s - 0.1 * s, y0, 0.2 * s, h * s);
     ctx.fillRect(x0, y0 + h * 0.45 * s, w * s, 0.15 * s);
-    ctx.fillStyle = rgb(mix(lit('#3a3a40'), light.sun, 0.5 * light.warm)); // windows glow warm in the evening
+    ctx.fillStyle = rgb(mix(mix(lit('#3a3a40'), light.sun, 0.5 * light.warm), [255, 214, 140], light.night)); // windows glow warm in the evening and at night
     ctx.fillRect(x0 + 0.5 * s, y0 + 0.6 * s, 1.2 * s, 0.9 * s); ctx.fillRect(x0 + (w - 1.7) * s, y0 + 0.6 * s, 1.2 * s, 0.9 * s);
+    if (light.night > 0.05) { glow(x0 + 1.1 * s, y0 + 1.05 * s, 1.6 * s); glow(x0 + (w - 1.1) * s, y0 + 1.05 * s, 1.6 * s); }
     ctx.fillStyle = rgb(lit(roof)); ctx.beginPath();
     ctx.moveTo(x0 - 0.9 * s, y0 + 0.2 * s); ctx.lineTo(x0 + (w + 0.9) * s, y0 + 0.2 * s); ctx.lineTo(x0 + (w - 1.4) * s, y0 - 2.3 * s); ctx.lineTo(x0 + 1.4 * s, y0 - 2.3 * s); ctx.fill();
     ctx.fillStyle = rgb(mix(lit(roof), [255, 240, 210], 0.3)); ctx.fillRect(x0 + 1.4 * s, y0 - 2.3 * s, (w - 2.8) * s, 0.3 * s);
@@ -817,7 +855,7 @@
     }
   }
   function drawPetals(L, now) {
-    const a = 0.75 * (1 - L.warm);
+    const a = 0.75 * (1 - L.warm) * (1 - L.night) * (1 - L.wet - L.snowy);
     if (a < 0.05) return;
     for (let i = 0; i < 18; i++) {
       const x = ((hash(i + 80) * W - now * (30 + hash(i) * 30)) % W + W) % W;
@@ -852,9 +890,9 @@
     }
   }
   function drawWash(L, now) {
-    if (cam.frame) { // sun rays, only in the main view
+    if (cam.frame && L.night < 0.9 && L.wet + L.snowy < 0.9) { // sun rays, only in the main view
       const sx = W * L.sunX, sy = HORIZON * L.sunY;
-      const rays = 0.05 + 0.07 * L.warm + (L.phase === 'morning' ? 0.04 : 0);
+      const rays = (0.05 + 0.07 * L.warm + (L.phase === 'morning' ? 0.04 : 0)) * (1 - L.night) * (1 - L.wet - L.snowy);
       for (let i = 0; i < 6; i++) {
         const a = Math.PI / 2 + (i - 2.5) * 0.28 + (L.sunX - 0.5) * -1.2 + Math.sin(now * 0.15 + i) * 0.03;
         const ray = ctx.createLinearGradient(sx, sy, sx + Math.cos(a) * 500, sy + Math.sin(a) * 500);
@@ -866,6 +904,65 @@
     if (L.tintA > 0.005) { ctx.fillStyle = rgb(L.tint, L.tintA); ctx.fillRect(0, 0, W, VIEW_H); }
     ctx.drawImage(paper, 0, 0);
   }
+  // ---------- Night lights, rain and snow ----------
+  // Lights (windows, lamps, headlights) are collected while drawing, then added on top of the
+  // night tint so they shine. One soft sprite keeps this cheap.
+  const glows = [];
+  const glowSprite = document.createElement('canvas');
+  glowSprite.width = glowSprite.height = 64;
+  {
+    const gx = glowSprite.getContext('2d'), gr = gx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, 'rgba(255,226,160,1)'); gr.addColorStop(0.3, 'rgba(255,200,120,.45)'); gr.addColorStop(1, 'rgba(255,190,110,0)');
+    gx.fillStyle = gr; gx.fillRect(0, 0, 64, 64);
+  }
+  const glow = (x, y, r) => { if (glows.length < 120 && r > 0.5) glows.push(x, y, r); };
+  function drawNightLights(L) {
+    if (L.night < 0.05) return;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    if (cam.frame) { // our headlight beam down the track
+      const beam = ctx.createLinearGradient(0, VIEW_H, 0, HORIZON + 10);
+      beam.addColorStop(0, `rgba(255,236,190,${0.28 * L.night})`); beam.addColorStop(1, 'rgba(255,236,190,0)');
+      const a = project(-1.6, 0, 6), b = project(1.6, 0, 6), c = project(1.2, 0, 140), d = project(-1.2, 0, 140);
+      ctx.fillStyle = beam; ctx.beginPath(); ctx.moveTo(a.x - 60, VIEW_H); ctx.lineTo(b.x + 60, VIEW_H); ctx.lineTo(c.x, c.y); ctx.lineTo(d.x, d.y); ctx.fill();
+    }
+    ctx.globalAlpha = Math.min(1, L.night * 1.2);
+    for (let i = 0; i < glows.length; i += 3) { const r = glows[i + 2]; ctx.drawImage(glowSprite, glows[i] - r, glows[i + 1] - r, r * 2, r * 2); }
+    ctx.restore();
+    stats.glows += glows.length / 3;
+  }
+  // Rain streaks or snowflakes over the view (fewer in the small camera insets), drops on the cab glass.
+  function drawPrecip(L, now) {
+    const a = L.wet + L.snowy;
+    if (a < 0.02) return;
+    const n = Math.round((cam.frame ? 170 : 70) * a), v = g.v;
+    ctx.beginPath();
+    if (L.wet) {
+      const slant = 0.18 + Math.min(0.5, v * 0.02);
+      for (let i = 0; i < n; i++) {
+        const y = (hash(i + 500) * VIEW_H + now * (700 + 400 * hash(i + 501))) % VIEW_H;
+        const x = ((hash(i + 502) * W - y * slant) % W + W) % W, len = 10 + 10 * hash(i + 503);
+        ctx.moveTo(x, y); ctx.lineTo(x - len * slant, y + len);
+      }
+      ctx.strokeStyle = rgb(mix([225, 232, 245], L.haze, 0.2), 0.6); ctx.lineWidth = 1.2; ctx.stroke();
+      if (cam.frame) { // drops on the cab window, sliding down
+        ctx.beginPath();
+        for (let i = 0; i < Math.round(28 * a); i++) {
+          const x = 20 + hash(i + 600) * (W - 40), y = 20 + (hash(i + 601) * VIEW_H + now * (6 + 14 * hash(i + 602))) % (VIEW_H - 30), r = 1.5 + 2 * hash(i + 603);
+          ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, 7);
+        }
+        ctx.fillStyle = 'rgba(225,235,245,.35)'; ctx.fill();
+      }
+    } else {
+      for (let i = 0; i < n; i++) {
+        const sp = 30 + 40 * hash(i + 510), y = (hash(i + 511) * VIEW_H + now * sp) % VIEW_H;
+        const x = ((hash(i + 512) * W + Math.sin(now * 0.8 + i) * 14 - now * v * 3 * (hash(i + 513) - 0.5)) % W + W) % W, r = 1.5 + 2.5 * hash(i + 514);
+        ctx.rect(x, y, r, r);
+      }
+      ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fill();
+    }
+    stats.precip += n;
+  }
+
   // ---------- Cats (lots of them) ----------
   const CAT_COLORS = [
     ['#e8913a', '#c46d1e'], ['#2a2a2e', '#111'], ['#f2f0ea', '#cfcac0'], ['#8d8f96', '#6b6d73'], ['#f2f0ea', '#e8913a'], ['#7a5236', '#4f3322'],
@@ -885,7 +982,7 @@
     for (let s = Math.ceil(a / CAT_STEP) * CAT_STEP; s < b; s += CAT_STEP) { const c = catAt(s); if (c) out.push(c); }
     return out;
   }
-  const stats = { catsDrawn: 0, frames: 0, trainDrawn: 0, gradePostsDrawn: 0, passDrawn: 0, insets: {}, lastInsets: [], mirrored: 0, trees: 0, birds: 0, fireflies: 0, landmarks: {} }; // render counters for automated tests
+  const stats = { catsDrawn: 0, frames: 0, trainDrawn: 0, gradePostsDrawn: 0, passDrawn: 0, insets: {}, lastInsets: [], mirrored: 0, trees: 0, birds: 0, fireflies: 0, landmarks: {}, glows: 0, precip: 0 }; // render counters for automated tests
   function drawCat(c, p) {
     const s = p.s * 1.4; // cats drawn a bit larger than life so you can spot them
     if (s < 1.2) return;
@@ -935,7 +1032,8 @@
     { let off = 0, slope = 0; for (let z = 0; z <= 600; z += 5) { offCache.push(off); slope += curvature(cam.pos + cam.dir * z) * 5; off += slope * 5; } }
 
     const now = performance.now() / 1000;
-    const L = light = lightAt(g.pos);
+    const L = light = weatherLight(lightAt(g.pos), weatherAt(g.pos));
+    glows.length = 0;
     // Backdrops drift with the curve ahead; flip that for mirrored (rear-facing) views.
     const pan = -offCache[offCache.length - 1] * 0.15 * cam.dir - cam.pos * 0.002;
     const ZMIN = cam.h * FOCAL / (VIEW_H - HORIZON) * 0.9, ZMAX = 600;
@@ -1101,6 +1199,8 @@
     ctx.stroke();
     if (cam.frame) drawPetals(L, now);
     drawWash(L, now);
+    drawNightLights(L);
+    drawPrecip(L, now);
     if (cam.frame) { // cab window frame
       ctx.fillStyle = '#1b1f24';
       ctx.fillRect(0, 0, W, 14); ctx.fillRect(0, 0, 14, VIEW_H); ctx.fillRect(W - 14, 0, 14, VIEW_H);
@@ -1131,6 +1231,7 @@
       }
       if (Math.round(s / 8) % 2 === 0) {
         const b = project(-5, 1.1, z), t = project(-5, 4.3, z);
+        if (light.night > 0.05) glow(t.x, t.y + 0.3 * t.s, 2.2 * t.s); // platform lamps
         ctx.strokeStyle = rgb(lit('#6b4f36')); ctx.lineWidth = Math.max(1, 0.18 * b.s);
         ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(t.x, t.y); ctx.stroke();
       }
@@ -1172,6 +1273,7 @@
         if (w % 2) quad([[side, 0.7, z0], [side, 0.7, z1], [side, 3.3, z1], [side, 3.3, z0]], rgb(lit('#c9c0ae')), ink);
         quad([[side, 2.1, z0], [side, 2.1, z1], [side, 3.0, z1], [side, 3.0, z0]], glass, ink);
         quad([[side, 2.6, z0], [side, 2.6, z1], [side, 2.85, z1], [side, 2.85, z0]], shine);
+        if (light.night > 0.05) { const c = project(side, 2.55, Math.max(ZMIN, (z0 + z1) / 2)); glow(c.x, c.y, 0.9 * c.s); } // lit carriages
       }
     }
     const zf = zOf(g.pos);
@@ -1182,6 +1284,7 @@
       quad([[-1.0, 2.9, zf], [0.2, 2.9, zf], [0.1, 3.2, zf], [-0.95, 3.2, zf]], shine);
       for (const hx of [-0.9, 0.9]) {
         const p = project(hx, 0.9, zf), r = Math.max(1, 0.18 * p.s);
+        if (light.night > 0.05) glow(p.x, p.y, r * 10);
         if (light.warm > 0.3) { // headlights glow in the evening
           const gl = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 6);
           gl.addColorStop(0, 'rgba(255,240,180,.6)'); gl.addColorStop(1, 'rgba(255,240,180,0)');
@@ -1342,7 +1445,7 @@
     ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(24, 22, 190, 46);
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillStyle = '#f2b8d0'; ctx.font = 'bold 18px sans-serif'; ctx.fillText('Cats spotted: ' + g.cats, 34, 37);
-    ctx.fillStyle = '#ddd'; ctx.font = '12px sans-serif'; ctx.fillText(scene.name + ' · ' + light.phase, 34, 57);
+    ctx.fillStyle = '#ddd'; ctx.font = '12px sans-serif'; ctx.fillText(scene.name + ' · ' + light.phase + (light.wet > 0.3 ? ' · rain' : light.snowy > 0.3 ? ' · snow' : ''), 34, 57);
     if (g.msgT > 0 && g.msg) {
       ctx.globalAlpha = Math.min(1, g.msgT);
       ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(W / 2 - 230, 64, 460, 36);
@@ -1411,7 +1514,8 @@
   }
 
   // Exposed for automated testing: set paused = true, then drive the game with step(dt) and render().
-  const hook = { get state() { return g; }, scene, stats, act, step, render, renderCam, paused: false, setPaused, sound, STATIONS, get LIMITS() { return LIMITS; }, GRADES, accel, limitAt, gradeAt, catsBetween, lightAt, stopsAt, ROUTE, mapAt,
+  const hook = { get state() { return g; }, scene, stats, act, step, render, renderCam, paused: false, setPaused, sound, STATIONS, get LIMITS() { return LIMITS; }, GRADES, accel, limitAt, gradeAt, catsBetween, lightAt, stopsAt, ROUTE, mapAt, weatherAt,
+    setWeather(kind, from = 0, to = 1e9) { g.wx = { kind, from, to }; }, // 'rain', 'snow' or 'clear' between two positions
     drawView(view) { drawWorld(view); }, // draw one camera's view full size (for screenshots and tests)
   };
   window.__train = hook;
