@@ -68,6 +68,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 
 | Date | Change | PR |
 |---|---|---|
+| 2026-11-08 | Fix the post-deploy phone check: it expected exactly 7 touch buttons, but the Feedback button made 8, so the first dev/prod deploy was marked failed although both sites were live | this PR |
 | 2026-11-08 | Dev and prod sites: merges go to dev (`/dev/`, marked with a DEV tag and title), "Ship" promotes dev to prod as a `prod-N` release with one-click rollback, live check on both, latest links kept in README.md; both sites phone friendly and self-updating without a hard refresh | this PR |
 | 2026-11-07 | Basic browser train-driving game: notches, speed limits, 4 stops, stop-on-mark scoring | [#1](https://github.com/Hitoshi85/train-simulator/pull/1) |
 | 2026-11-07 | Lots of cats with a +2 cat bonus; random scenery every 10 s (Snowy Peaks, Red-Rock Canyon, Coastal Cliffs) | [#2](https://github.com/Hitoshi85/train-simulator/pull/2) |
