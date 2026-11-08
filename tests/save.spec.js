@@ -96,3 +96,11 @@ test('finishing the line records the best score and clears the saved run', async
   expect(r.run).toBeNull();
   expect(r.best.score).toBe(r.score);
 });
+
+test('the dev site keeps its own save, apart from prod', async ({ page }) => {
+  const k = await page.evaluate(() => {
+    const S = window.__train.save;
+    return [S.KEY, S.keyFor('/train-simulator/'), S.keyFor('/train-simulator/index.html'), S.keyFor('/train-simulator/dev/'), S.keyFor('/train-simulator/dev/index.html'), S.keyFor('/train-simulator/dev')];
+  });
+  expect(k).toEqual(['aozora.save', 'aozora.save', 'aozora.save', 'aozora.save.dev', 'aozora.save.dev', 'aozora.save.dev']);
+});

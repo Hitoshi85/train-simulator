@@ -103,7 +103,9 @@
   // One versioned JSON record, so it can later move to a cloud account as-is:
   // { v, settings: { mode, muted }, best: { local|express: { score, rank, at } }, run: null | { mode, seg, clock, ... } }
   const save = (() => {
-    const KEY = 'aozora.save', V = 1;
+    // Dev (/train-simulator/dev/) shares the browser origin with prod, so it keeps its own save.
+    const keyFor = (path) => (/\/dev(\/|$)/.test(path) ? 'aozora.save.dev' : 'aozora.save');
+    const KEY = keyFor(location.pathname), V = 1;
     const blank = () => ({ v: V, settings: { mode: 'local', muted: false }, best: {}, run: null });
     let data = blank();
     function load() {
@@ -111,14 +113,14 @@
       try {
         const raw = JSON.parse(localStorage.getItem(KEY) || 'null');
         if (raw && raw.v === V) data = { ...data, ...raw, settings: { ...data.settings, ...raw.settings } };
-        else if (localStorage.getItem('aozora.muted') === '1') data.settings.muted = true; // before saves existed
+        else if (KEY === 'aozora.save' && localStorage.getItem('aozora.muted') === '1') data.settings.muted = true; // before saves existed
       } catch { /* storage blocked or corrupt: start fresh */ }
       return data;
     }
     function write() { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch { /* storage blocked */ } }
     load();
     return {
-      KEY, V, load, write,
+      KEY, V, keyFor, load, write,
       get data() { return data; },
       setting(k, val) { data.settings[k] = val; write(); },
       setRun(run) { data.run = run; write(); },
