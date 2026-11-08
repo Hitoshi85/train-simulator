@@ -48,7 +48,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | W9 | Use several focused subagents in parallel for independent parts of a task, keeping token use balanced (few agents, small prompts). | In place |
 | W10 | When asking for approval on backlog items, ask one item at a time with 3 options, and always include an option to remove the item from the backlog without doing it (the issue is closed as not planned). | In place |
 | W11 | Automatic phone and speed checks on every PR: CI takes phone screenshots (portrait 390×844 and landscape 844×390, title and mid-run; artifact `phone-screenshots`) and fails a PR if the median time to draw one frame at phone size is over 16 ms (60 fps). Frame times appear in the CI job summary. | In place (this PR) |
-| W12 | An automated review agent (Claude Code GitHub Action, check "Claude review") reviews every PR for bugs, posts inline and summary comments, and fails the check only for a must-fix problem. Needs a `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` repo secret; skipped (green) until one is added. | In place once the key is added (this PR) |
+| W12 | An automated review agent (Claude Code GitHub Action, check "Claude review") reviews every PR for bugs, posts inline and summary comments, and fails the check only for a must-fix problem. Needs a `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` repo secret; skipped (green) until one is added. | Workflow in place (this PR); sign-in deferred by Hitoshi, reviews skip until a secret is added |
 
 ## 2. Shipped changes
 
@@ -98,6 +98,8 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-08 | New shorthand: a message of only "m" means merge the PR. Hitoshi sent "M" for the Express PR. | Express PR rebased onto #17 and #18 and merged once CI was green. |
 | 2026-11-08 | Asked whether the setup is fully agentic; approved all six proposed upgrades, then dropped the daily backlog routine (item 3). | Auto-merge, merge queue and post-deploy check built in a separate PR; phone screenshots, frame budget and review agent built in this PR (W11, W12). |
 | 2026-11-08 | Hitoshi wants to talk only in the project chat (one orchestrator), not in each thread. | Threads send questions, ready PRs and manual steps through the project chat. |
+| 2026-11-08 | Question: how strict should the frame-rate check be? (options: fixed 60 fps budget, no slowdown vs main, report only) | Hitoshi chose the fixed budget: fail over 16 ms median at phone size (W11). |
+| 2026-11-08 | Question: how should the review agent sign in? (options: Claude subscription token, Anthropic API key, not yet) | Hitoshi chose "not yet": the review workflow ships and skips until a secret is added (W12). |
 
 ## 4. Open backlog
 
@@ -114,3 +116,4 @@ Removed by the owner on 2026-11-08 (closed as not planned): [#5](https://github.
 - Extra lines.
 - A native iOS version (SwiftUI + SceneKit) of the same original game.
 - CI posting a test-results table on each PR.
+- Turn on the Claude review agent: add a `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) or `ANTHROPIC_API_KEY` repo secret (deferred by Hitoshi, 2026-11-08).
