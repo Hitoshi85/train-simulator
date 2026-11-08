@@ -1,5 +1,5 @@
 // Aozora Line – a tiny original train-driving game.
-// Drive between fictional stations, respect speed limits, stop on the mark on time.
+// Drive a seaside line based on real towns in Japan, respect speed limits, stop on the mark on time.
 (() => {
   'use strict';
 
@@ -12,20 +12,43 @@
   const CAM_H = 3;             // camera height (m)
   const FOCAL = 600;           // projection focal length (px)
 
-  // ---------- Route (all fictional) ----------
+  // ---------- Route ----------
+  // Based on a real seaside line in Japan, Fujisawa to Kamakura by way of Enoshima (9 of its stops;
+  // distances shortened to fit the game). All art is original. Kept as data so more lines can be added.
   // run: scheduled seconds from the previous stop (Local). exp: seconds from the previous
   // Express stop; stations without exp are passed by the Express without stopping.
-  const STATIONS = [
-    { name: 'Hinata',     pos: 0, exp: 0 },
-    { name: 'Kozakura',   pos: 900,  run: 95 },
-    { name: 'Kawabe',     pos: 1800, run: 90, exp: 130 },
-    { name: 'Nanohana',   pos: 3000, run: 115 },
-    { name: 'Momijidai',  pos: 4200, run: 110, exp: 175 },
-    { name: 'Hotarubashi', pos: 5100, run: 95 },
-    { name: 'Shiokaze',   pos: 6000, run: 90, exp: 140 },
-    { name: 'Yuzuhara',   pos: 7300, run: 120 },
-    { name: 'Tsukimino',  pos: 8600, run: 120, exp: 160 },
-  ];
+  // zones: which painted scene the line runs through, from `at` until the next zone.
+  const ROUTE = {
+    id: 'shonan', name: 'Shonan Coast Line',
+    stations: [
+      { name: 'Fujisawa',         kanji: '藤沢',       pos: 0, exp: 0 },
+      { name: 'Kugenuma',         kanji: '鵠沼',       pos: 900,  run: 95 },
+      { name: 'Enoshima',         kanji: '江ノ島',     pos: 1800, run: 90, exp: 130 },
+      { name: 'Koshigoe',         kanji: '腰越',       pos: 3000, run: 115 },
+      { name: 'Kamakura-Kokomae', kanji: '鎌倉高校前', pos: 4200, run: 110, exp: 175 },
+      { name: 'Shichirigahama',   kanji: '七里ヶ浜',   pos: 5100, run: 95 },
+      { name: 'Inamuragasaki',    kanji: '稲村ヶ崎',   pos: 6000, run: 90, exp: 140 },
+      { name: 'Hase',             kanji: '長谷',       pos: 7300, run: 120 },
+      { name: 'Kamakura',         kanji: '鎌倉',       pos: 8600, run: 120, exp: 160 },
+    ],
+    zones: [
+      { at: 0, scene: 'town', name: 'Fujisawa' },
+      { at: 600, scene: 'pines', name: 'Kugenuma pine woods' },
+      { at: 1450, scene: 'seaside', name: 'Enoshima' },
+      { at: 2500, scene: 'town', name: 'Koshigoe' },
+      { at: 3500, scene: 'seaside', name: 'Shichirigahama coast' },
+      { at: 6500, scene: 'temple', name: 'Hase temple hills' },
+      { at: 8100, scene: 'town', name: 'Kamakura' },
+    ],
+    // Map layout (m) for distant landmarks: the line heads south to the sea, then east along the coast.
+    turn: [1300, 2700], // the curve from heading south to heading east
+    landmarks: [
+      { id: 'fuji', x: -60000, y: 3000 },
+      { id: 'enoshima', x: 300, y: -2900 },
+      { id: 'cape', x: 5900, y: -2300 },
+    ],
+  };
+  const STATIONS = ROUTE.stations;
   const MODES = ['local', 'express'];
   const MODE_NAMES = { local: 'Local', express: 'Express' };
   const LOCAL_LIMITS = [
@@ -345,21 +368,37 @@
   const hash = (n) => { const x = Math.sin(n * 127.1) * 43758.5453; return x - Math.floor(x); };
 
   // ---------- Painted scenery: watercolour skies, layered hills, lush greenery (all original) ----------
-  // Three pastoral scenes, a random new one every 10 s with a fade. The light follows the run:
-  // morning at the first station, bright midday mid-line, a golden evening by the last stops.
-  const SCENES = ['paddies', 'forest', 'seaside'];
-  const SCENE_NAMES = { paddies: 'Rice Paddy Valley', forest: 'Forest Hills', seaside: 'Seaside Town' };
-  const scene = { cur: 'paddies', prev: 'paddies', blend: 1, t: 0 };
+  // The scenery follows the towns on the route (ROUTE.zones), fading from one scene to the next.
+  // The light follows the run: morning at the first station, bright midday mid-line, evening at the end.
+  // Scenes: town, pines, seaside, temple (this line), plus paddies and forest for future lines.
+  const zoneAt = (p) => { let z = ROUTE.zones[0]; for (const Z of ROUTE.zones) if (p >= Z.at) z = Z; return z; };
+  const scene = { cur: ROUTE.zones[0].scene, prev: ROUTE.zones[0].scene, name: ROUTE.zones[0].name, blend: 1 };
   function updateScene(dt) {
-    scene.t += dt;
     if (scene.blend < 1) scene.blend = Math.min(1, scene.blend + dt / 1.5);
-    if (scene.t >= 10) {
-      scene.t = 0;
-      const others = SCENES.filter((n) => n !== scene.cur);
-      scene.prev = scene.cur; scene.cur = others[Math.floor(Math.random() * others.length)];
-      scene.blend = 0;
-      if (g.state === 'running') flash('Now entering: ' + SCENE_NAMES[scene.cur], 2);
-    }
+    const z = zoneAt(g.pos);
+    if (z.name === scene.name) return;
+    scene.name = z.name;
+    if (z.scene !== scene.cur) { scene.prev = scene.cur; scene.cur = z.scene; scene.blend = g.state === 'running' ? 0 : 1; }
+    if (g.state === 'running') flash('Now entering: ' + z.name, 2);
+  }
+  // Where the line is on the map, and which way it heads, for distant landmarks (see ROUTE.turn).
+  function mapAt(p) {
+    const [t0, t1] = ROUTE.turn, R = (t1 - t0) / (Math.PI / 2);
+    if (p <= t0) return { x: 0, y: -p, h: -Math.PI / 2 };
+    if (p <= t1) { const a = (p - t0) / R; return { x: R - R * Math.cos(a), y: -t0 - R * Math.sin(a), h: -Math.PI / 2 + a }; }
+    return { x: R + (p - t1), y: -t0 - R, h: 0 };
+  }
+  // Screen position of a landmark for the current camera: x on screen, distance, or null if out of view.
+  function landmarkView(id, pan) {
+    const m = ROUTE.landmarks.find((l) => l.id === id), c = mapAt(cam.pos);
+    const dx = m.x - c.x, dy = m.y - c.y, d = Math.hypot(dx, dy);
+    let rel = -(Math.atan2(dy, dx) - c.h - (cam.dir < 0 ? Math.PI : 0)); // angle to the right of view
+    rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+    if (Math.abs(rel) > 1.1) return null;
+    const sx = W / 2 + Math.tan(rel) * FOCAL, x = (cam.dir > 0 ? sx : W - sx) + pan * 0.15; // backdrops are mirrored looking back
+    if (x < -300 || x > W + 300) return null;
+    stats.landmarks[id] = (stats.landmarks[id] || 0) + 1;
+    return { x, d, k: FOCAL / d };
   }
 
   // Colour helpers: colours are [r, g, b] arrays so they can be blended with the light.
@@ -409,6 +448,7 @@
     glow.addColorStop(0, rgb(L.sun, 0.85)); glow.addColorStop(0.25, rgb(L.sun, 0.3)); glow.addColorStop(1, rgb(L.sun, 0));
     ctx.fillStyle = glow; ctx.fillRect(sx - R * 5, sy - R * 5, R * 10, R * 10);
     ctx.fillStyle = rgb(mix(L.sun, [255, 255, 255], 0.4)); ctx.beginPath(); ctx.arc(sx, sy, R, 0, 7); ctx.fill();
+    drawFuji(L, pan);
     // towering summer clouds: a shadowed mass, then sunlit puffs leaning toward the sun
     const shade = mix(mix(L.mid, [150, 150, 185], 0.35), L.low, 0.25);
     const bright = mix([255, 255, 255], L.sun, 0.25 + 0.45 * L.warm);
@@ -427,6 +467,41 @@
       ctx.fillStyle = rgb(bright, 0.95); ctx.beginPath();
       for (const [px, py, pr] of puffs) { ctx.moveTo(px + lean * pr * 0.12 + pr * 0.82, py - pr * 0.12); ctx.arc(px + lean * pr * 0.12, py - pr * 0.12, pr * 0.82, 0, 7); }
       ctx.fill();
+    }
+  }
+
+  // Distant landmarks of the real line, placed by map bearing so every camera sees them where they are:
+  // the snow-capped volcano far across the bay, Enoshima island with its lighthouse tower, the cape.
+  function drawFuji(L, pan) {
+    const v = landmarkView('fuji', pan); if (!v) return;
+    const h = 3776 * v.k * 2.2, w = h * 3, x = v.x, y = HORIZON + 2;
+    ctx.fillStyle = rgb(mix(lit('#7484b0'), L.haze, 0.45)); ctx.beginPath();
+    ctx.moveTo(x - w, y); ctx.quadraticCurveTo(x - w * 0.35, y - h * 0.55, x - w * 0.12, y - h); ctx.lineTo(x + w * 0.12, y - h);
+    ctx.quadraticCurveTo(x + w * 0.35, y - h * 0.55, x + w, y); ctx.fill();
+    ctx.fillStyle = rgb(mix([250, 250, 255], L.sun, 0.3), 0.92); ctx.beginPath(); // snow cap with streaks
+    ctx.moveTo(x - w * 0.12, y - h); ctx.lineTo(x + w * 0.12, y - h); ctx.lineTo(x + w * 0.26, y - h * 0.64);
+    for (let i = 4; i >= -4; i--) ctx.lineTo(x + i * w * 0.06, y - h * (i % 2 ? 0.6 : 0.74));
+    ctx.lineTo(x - w * 0.26, y - h * 0.64); ctx.fill();
+  }
+  function drawIslands(L, pan) {
+    const isle = landmarkView('enoshima', pan);
+    if (isle) {
+      const k = Math.min(isle.k, 0.35), x = isle.x, y = HORIZON - 2, w = 520 * k, h = 70 * k;
+      ctx.fillStyle = rgb(mix(lit('#4f7d58'), L.haze, 0.4)); ctx.beginPath();
+      ctx.moveTo(x - w, y); ctx.bezierCurveTo(x - w * 0.6, y - h * 1.1, x + w * 0.3, y - h * 1.2, x + w, y); ctx.fill();
+      ctx.fillStyle = rgb(mix(lit('#6c9a64'), L.haze, 0.35)); blob(x - w * 0.2, y - h * 0.75, h * 0.5, 3, 6);
+      const tx = x + w * 0.05, th = 60 * k, tw = Math.max(1.5, 7 * k); // lighthouse tower on the summit
+      ctx.fillStyle = rgb(mix(lit('#e8e6e0'), L.haze, 0.25)); ctx.fillRect(tx - tw / 2, y - h - th, tw, th);
+      ctx.fillRect(tx - tw * 1.3, y - h - th, tw * 2.6, Math.max(1, 4 * k));
+      ctx.fillStyle = rgb(mix(lit('#b6c0c8'), L.haze, 0.25)); ctx.fillRect(tx - tw * 0.6, y - h - th - 6 * k, tw * 1.2, 6 * k);
+    }
+    const cape = landmarkView('cape', pan);
+    if (cape) {
+      const k = Math.min(cape.k, 0.3), x = cape.x, y = HORIZON - 2, w = 900 * k, h = 45 * k, s = 1;
+      ctx.fillStyle = rgb(mix(lit('#3f6f47'), L.haze, 0.35)); ctx.beginPath();
+      ctx.moveTo(x - s * w * 0.2, y); ctx.quadraticCurveTo(x - s * w * 0.1, y - h * 1.2, x + s * w * 0.3, y - h);
+      ctx.quadraticCurveTo(x + s * w * 0.8, y - h * 0.8, x + s * w * 1.4, y - h * 0.3); ctx.lineTo(x + s * w * 1.4, y); ctx.fill();
+      ctx.fillStyle = rgb(mix(lit('#d9c39a'), L.haze, 0.3)); ctx.fillRect(Math.min(x - s * w * 0.2, x + s * w * 1.4), y - 1, w * 1.6, 2);
     }
   }
 
@@ -457,7 +532,17 @@
     }
   }
 
-  const GROUND = { paddies: ['#b4cf8c', '#5e9846'], forest: ['#8cb872', '#3d7a3a'], seaside: ['#bed592', '#6a9e4e'] };
+  // A hillside of little houses; `rise` lifts the far ones up the slope.
+  function drawRooftops(L, pan, rise) {
+    const roofs = ['#c0504a', '#3f6fa0', '#d08a3a', '#4f8a6a', '#5a6270', '#8a4a6a'];
+    for (let i = 0; i < 14; i++) {
+      const x = 30 + i * 22 + hash(i + 7) * 10 + pan * 0.8;
+      const y = HORIZON - 4 - hash(i + 3) * rise * (1 - i / 16) - (rise ? 0 : hash(i + 5) * 6);
+      ctx.fillStyle = rgb(lit('#f4eee0')); ctx.fillRect(x, y - 7, 12, 7);
+      ctx.fillStyle = rgb(lit(roofs[i % roofs.length])); ctx.beginPath(); ctx.moveTo(x - 2, y - 7); ctx.lineTo(x + 6, y - 12); ctx.lineTo(x + 14, y - 7); ctx.fill();
+    }
+  }
+  const GROUND = { town: ['#b9cf94', '#77a05a'], pines: ['#c9d39a', '#7c9a56'], temple: ['#8cb872', '#3d7a3a'], paddies: ['#b4cf8c', '#5e9846'], forest: ['#8cb872', '#3d7a3a'], seaside: ['#bed592', '#6a9e4e'] };
   function quadAt(pts, fill) {
     ctx.fillStyle = fill; ctx.beginPath();
     pts.forEach(([x, y, z], i) => { const p = project(x, y, z); if (i) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y); });
@@ -476,20 +561,25 @@
       drawHills(L, pan, [
         ['#6f8aa0', 0.5, 40, 50, 120, 3, 0.3, 4], ['#3f6f55', 0.25, 22, 50, 80, 5, 0.6, 7], ['#2f5f38', 0.05, 4, 36, 55, 1, 1, 8],
       ]);
+    } else if (name === 'town' || name === 'pines') {
+      drawHills(L, pan, [['#8a9cb0', 0.55, 26, 30, 150, 2, 0.3, 0], ['#5f8a68', 0.3, 6, 22, 90, 5, 0.6, name === 'pines' ? 0 : 4]]);
+      if (name === 'pines') drawHills(L, pan, [['#2f5a3c', 0.15, 2, 16, 40, 3, 0.9, 6]]);
+      else drawRooftops(L, pan, 0);
+    } else if (name === 'temple') {
+      drawHills(L, pan, [['#6f8aa0', 0.5, 40, 50, 120, 3, 0.3, 4], ['#3f6f55', 0.25, 22, 50, 80, 5, 0.6, 7]]);
+      for (const [fx, fy] of [[0.22, 58], [0.63, 46]]) { // temple halls on the wooded hills
+        const x = ((W * fx + pan * 0.6) % (W + 200) + W + 200) % (W + 200) - 100, y = HORIZON - fy;
+        ctx.fillStyle = rgb(mix(lit('#3a3036'), L.haze, 0.3)); ctx.beginPath();
+        ctx.moveTo(x - 30, y); ctx.quadraticCurveTo(x - 14, y - 4, x - 10, y - 12); ctx.lineTo(x + 10, y - 12);
+        ctx.quadraticCurveTo(x + 14, y - 4, x + 30, y); ctx.fill();
+        ctx.fillStyle = rgb(mix(lit('#b0423a'), L.haze, 0.3)); ctx.fillRect(x - 18, y, 36, 9);
+      }
+      drawHills(L, pan, [['#2f5f38', 0.05, 4, 36, 55, 1, 1, 8]]);
     } else {
       ctx.fillStyle = rgb(mix(lit('#4b97c4'), L.haze, 0.35)); ctx.fillRect(0, HORIZON - 4, W, 6);
-      for (const [ix, iw, ih] of [[0.68, 70, 14], [0.86, 110, 22]]) { // distant islands
-        ctx.fillStyle = rgb(mix(lit('#6c8aa0'), L.haze, 0.55)); ctx.beginPath();
-        ctx.ellipse(W * ix, HORIZON - 3, iw, ih, 0, Math.PI, 0); ctx.fill();
-      }
+      drawIslands(L, pan);
       drawHills(L, pan, [['#7d95a8', 0.5, 28, 40, 120, 2, 0.3, 0], ['#5e8a52', 0.15, 6, 34, 80, 6, 0.8, 4]], true);
-      // a little town on the hillside
-      const roofs = ['#c0504a', '#3f6fa0', '#d08a3a', '#4f8a6a', '#8a4a6a'];
-      for (let i = 0; i < 14; i++) {
-        const x = 30 + i * 22 + hash(i + 7) * 10 + pan * 0.8, y = HORIZON - 4 - hash(i + 3) * 26 * (1 - i / 16);
-        ctx.fillStyle = rgb(lit('#f4eee0')); ctx.fillRect(x, y - 7, 12, 7);
-        ctx.fillStyle = rgb(lit(roofs[i % roofs.length])); ctx.beginPath(); ctx.moveTo(x - 2, y - 7); ctx.lineTo(x + 6, y - 12); ctx.lineTo(x + 14, y - 7); ctx.fill();
-      }
+      drawRooftops(L, pan, 26);
     }
   }
   function drawGround(name, now, L, ZMIN) {
@@ -642,10 +732,50 @@
       });
     }
   }
-  const LEAF = { paddies: ['#3f7a3a', '#5a9a48', '#9cc86a'], forest: ['#2c5e35', '#3f7f45', '#7fb860'], seaside: ['#3c7444', '#579a52', '#a2cc72'] };
+  // Wind-bent black pine of the coast: a leaning trunk with flat, layered crowns.
+  function pine(b, s, k, now) {
+    stats.trees++;
+    const lean = (k < 0.5 ? -1 : 1) * 0.8 * s, sway = Math.sin(now * 1.2 + k * 25) * 0.08 * s;
+    ctx.strokeStyle = rgb(lit('#5a3f2e')); ctx.lineWidth = Math.max(1, 0.35 * s); ctx.beginPath();
+    ctx.moveTo(b.x, b.y); ctx.quadraticCurveTo(b.x - lean * 0.2, b.y - 3 * s, b.x + lean, b.y - 6 * s); ctx.stroke();
+    for (let i = 0; i < 3; i++) {
+      const cx = b.x + lean * (0.4 + i * 0.3) + sway * (i + 1), cy = b.y - (3.6 + i * 1.3) * s, rx = (2.6 - i * 0.6) * s;
+      ctx.fillStyle = rgb(lit(i ? '#2f5a3a' : '#284f33')); ctx.beginPath(); ctx.ellipse(cx, cy, rx, 0.6 * s, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = rgb(mix(lit('#5c8a54'), light.sun, 0.25 * light.warm)); ctx.beginPath(); ctx.ellipse(cx + 0.3 * s, cy - 0.25 * s, rx * 0.6, 0.3 * s, 0, 0, 7); ctx.fill();
+    }
+  }
+  // Vermilion shrine gate.
+  function torii(b, s) {
+    const red = rgb(lit('#d0452f')), w = 3.2 * s;
+    ctx.fillStyle = red; ctx.fillRect(b.x - w * 0.4, b.y - 4 * s, 0.35 * s, 4 * s); ctx.fillRect(b.x + w * 0.4 - 0.35 * s, b.y - 4 * s, 0.35 * s, 4 * s);
+    ctx.fillRect(b.x - w * 0.5, b.y - 3.3 * s, w, 0.3 * s);
+    ctx.fillStyle = rgb(lit('#2a2224')); ctx.beginPath(); ctx.moveTo(b.x - w * 0.62, b.y - 4.2 * s); ctx.quadraticCurveTo(b.x, b.y - 3.9 * s, b.x + w * 0.62, b.y - 4.2 * s);
+    ctx.lineTo(b.x + w * 0.55, b.y - 3.95 * s); ctx.lineTo(b.x - w * 0.55, b.y - 3.95 * s); ctx.fill();
+  }
+  // Hydrangea bushes, blue and violet, as seen around the temples in early summer.
+  function hydrangea(b, s, k) {
+    ctx.fillStyle = rgb(lit('#3f7a45')); blob(b.x, b.y - 0.7 * s, 1.3 * s, k * 9, 6);
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = rgb(lit(['#7a8fe0', '#a07ad6', '#6fa8e0', '#c69ae0'][(i + Math.floor(k * 10)) % 4]));
+      ctx.beginPath(); ctx.arc(b.x + (i - 2) * 0.45 * s, b.y - (0.9 + 0.35 * hash(k + i)) * s, 0.38 * s, 0, 7); ctx.fill();
+    }
+  }
+  const LEAF = { town: ['#3c7444', '#579a52', '#a2cc72'], temple: ['#2c5e35', '#3f7f45', '#7fb860'], maple: ['#a8402e', '#d0603a', '#f0a050'], paddies: ['#3f7a3a', '#5a9a48', '#9cc86a'], forest: ['#2c5e35', '#3f7f45', '#7fb860'], seaside: ['#3c7444', '#579a52', '#a2cc72'] };
   function drawProp(name, b, k, now, side) {
     const s = b.s;
-    if (name === 'paddies') {
+    if (name === 'town') {
+      if (k < 0.4) house(b, s, k, now, ['#5a6270', '#c0504a', '#3f6fa0', '#6a5a4a'][Math.floor(k * 23) % 4], '#f4efe4', 5 + k * 4, 3 + (k < 0.2 ? 2 : 0), k < 0.1, side);
+      else if (k < 0.48) pine(b, s, k, now);
+      else roundTree(b, s, k, now, LEAF.town, 1.6, 1.8 + k * 1.5);
+    } else if (name === 'pines') {
+      if (k < 0.05) house(b, s, k, now, '#5a6270', '#f4efe4', 6, 3, true, side);
+      else pine(b, s, k, now);
+    } else if (name === 'temple') {
+      if (k < 0.08) torii(b, s);
+      else if (k < 0.2) cedar(b, s, k, now);
+      else if (k < 0.32) hydrangea(b, s, k);
+      else roundTree(b, s, k, now, k < 0.42 ? LEAF.maple : LEAF.temple, 2.4, 3 + k * 2);
+    } else if (name === 'paddies') {
       if (k < 0.08 || (k > 0.3 && k < 0.36)) house(b, s, k, now, k < 0.08 ? '#7a6a4a' : '#56677a', '#f1e8d4', 6, 3, true, side);
       else roundTree(b, s, k, now, LEAF.paddies, 1.8 + k * 2, 2 + k * 2);
     } else if (name === 'forest') {
@@ -755,7 +885,7 @@
     for (let s = Math.ceil(a / CAT_STEP) * CAT_STEP; s < b; s += CAT_STEP) { const c = catAt(s); if (c) out.push(c); }
     return out;
   }
-  const stats = { catsDrawn: 0, frames: 0, trainDrawn: 0, gradePostsDrawn: 0, passDrawn: 0, insets: {}, lastInsets: [], mirrored: 0, trees: 0, birds: 0, fireflies: 0 }; // render counters for automated tests
+  const stats = { catsDrawn: 0, frames: 0, trainDrawn: 0, gradePostsDrawn: 0, passDrawn: 0, insets: {}, lastInsets: [], mirrored: 0, trees: 0, birds: 0, fireflies: 0, landmarks: {} }; // render counters for automated tests
   function drawCat(c, p) {
     const s = p.s * 1.4; // cats drawn a bit larger than life so you can spot them
     if (s < 1.2) return;
@@ -850,6 +980,15 @@
         if (x < 0 && x > -16 && onPlatform(s)) x -= 10; // keep houses and trees off the platform
         if (scene.blend < 1) objs.push({ z: zOf(s), t: 'prop', x, k: h, sc: scene.prev, a: 1 - scene.blend });
         objs.push({ z: zOf(s), t: 'prop', x, k: h, sc: scene.cur, a: scene.blend });
+      }
+    }
+    for (const [sc, a] of [[scene.prev, 1 - scene.blend], [scene.cur, scene.blend]]) { // towns: a row of houses close to the line
+      if (sc !== 'town' || a <= 0.01) continue;
+      const [lo, hi] = span(260);
+      for (let s = Math.ceil(lo / 13) * 13 + 6; s < hi; s += 13) {
+        const h = hash(s * 1.7), side = h < 0.5 ? -1 : 1;
+        if (h > 0.85 || (side < 0 && onPlatform(s))) continue;
+        objs.push({ z: zOf(s), t: 'prop', x: side * (9 + h * 6), k: 0.1 + h * 0.3, sc, a });
       }
     }
     if (cam.frame) { // grass tufts and wildflowers close to the track (main view only)
@@ -950,9 +1089,10 @@
         const t = project(-5, 3.2, o.z), s = t.s;
         ctx.fillStyle = wood; ctx.fillRect(t.x - 1.6 * s, t.y, 0.15 * s, 1.6 * s); ctx.fillRect(t.x + 1.45 * s, t.y, 0.15 * s, 1.6 * s);
         ctx.fillStyle = rgb(lit('#fbf3df')); ctx.strokeStyle = rgb(lit('#7a5232')); ctx.lineWidth = Math.max(1, 0.12 * s);
-        ctx.fillRect(t.x - 2 * s, t.y - 0.5 * s, 4 * s, 1 * s); ctx.strokeRect(t.x - 2 * s, t.y - 0.5 * s, 4 * s, 1 * s);
-        ctx.fillStyle = '#3a2a1e'; ctx.font = `bold ${Math.max(5, 0.5 * s)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(o.S.name, t.x, t.y);
+        ctx.fillRect(t.x - 2 * s, t.y - 0.7 * s, 4 * s, 1.4 * s); ctx.strokeRect(t.x - 2 * s, t.y - 0.7 * s, 4 * s, 1.4 * s);
+        ctx.fillStyle = '#3a2a1e'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = `bold ${Math.max(5, 0.6 * s)}px sans-serif`; ctx.fillText(o.S.kanji || o.S.name, t.x, t.y - 0.18 * s, 3.7 * s);
+        ctx.font = `bold ${Math.max(4, 0.3 * s)}px sans-serif`; ctx.fillText(o.S.name.toUpperCase(), t.x, t.y + 0.4 * s, 3.7 * s);
       }
     }
     // overhead wire
@@ -1202,7 +1342,7 @@
     ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(24, 22, 190, 46);
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillStyle = '#f2b8d0'; ctx.font = 'bold 18px sans-serif'; ctx.fillText('Cats spotted: ' + g.cats, 34, 37);
-    ctx.fillStyle = '#ddd'; ctx.font = '12px sans-serif'; ctx.fillText(SCENE_NAMES[scene.blend < 0.5 ? scene.prev : scene.cur] + ' · ' + light.phase, 34, 57);
+    ctx.fillStyle = '#ddd'; ctx.font = '12px sans-serif'; ctx.fillText(scene.name + ' · ' + light.phase, 34, 57);
     if (g.msgT > 0 && g.msg) {
       ctx.globalAlpha = Math.min(1, g.msgT);
       ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(W / 2 - 230, 64, 460, 36);
@@ -1271,7 +1411,9 @@
   }
 
   // Exposed for automated testing: set paused = true, then drive the game with step(dt) and render().
-  const hook = { get state() { return g; }, scene, stats, act, step, render, renderCam, paused: false, setPaused, sound, STATIONS, get LIMITS() { return LIMITS; }, GRADES, accel, limitAt, gradeAt, catsBetween, lightAt, stopsAt };
+  const hook = { get state() { return g; }, scene, stats, act, step, render, renderCam, paused: false, setPaused, sound, STATIONS, get LIMITS() { return LIMITS; }, GRADES, accel, limitAt, gradeAt, catsBetween, lightAt, stopsAt, ROUTE, mapAt,
+    drawView(view) { drawWorld(view); }, // draw one camera's view full size (for screenshots and tests)
+  };
   window.__train = hook;
   requestAnimationFrame(frame);
 })();

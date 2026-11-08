@@ -235,16 +235,40 @@ test('cats render beside the track and on platforms', async ({ page }) => {
   expect(r.drawn).toBeGreaterThan(0);
 });
 
-test('scenery changes every 10 seconds', async ({ page }) => {
+test('scenery follows the real towns along the line', async ({ page }) => {
   const r = await page.evaluate(() => {
     const T = window.__train;
     T.paused = true;
-    const first = T.scene.cur;
-    for (let i = 0; i < 210; i++) T.step(0.05);
-    T.render();
-    return { first, now: T.scene.cur };
+    T.act('enter');
+    const at = (pos) => { T.state.pos = pos; for (let i = 0; i < 40; i++) T.step(0.05); T.state.pos = pos; return [T.scene.cur, T.scene.name]; };
+    return { start: at(100), coast: at(4400), temples: at(7000), end: at(8500) };
   });
-  expect(r.now).not.toBe(r.first);
+  expect(r.start).toEqual(['town', 'Fujisawa']);
+  expect(r.coast).toEqual(['seaside', 'Shichirigahama coast']);
+  expect(r.temples[0]).toBe('temple');
+  expect(r.end).toEqual(['town', 'Kamakura']);
+});
+
+test('stations are real towns, and landmarks sit where they are on the map in every camera', async ({ page }) => {
+  const r = await page.evaluate(() => {
+    const T = window.__train;
+    T.paused = true;
+    T.act('enter');
+    const seen = (view) => { T.stats.landmarks = {}; T.drawView(view); return Object.keys(T.stats.landmarks).sort(); };
+    const names = T.STATIONS.map((s) => s.name);
+    T.state.pos = 1600; for (let i = 0; i < 40; i++) T.step(0.05); T.state.pos = 1600;
+    const approach = seen({ pos: 1600, dir: 1, x: 0, h: 3 }); // heading for the sea: the island ahead
+    T.state.pos = 4400; for (let i = 0; i < 40; i++) T.step(0.05); T.state.pos = 4400;
+    const ahead = seen({ pos: 4400, dir: 1, x: 0, h: 3 });   // along the coast to the east
+    const behind = seen({ pos: 4320, dir: -1, x: 0, h: 3 }); // rear camera, looking west
+    return { names, approach, ahead, behind };
+  });
+  expect(r.names[0]).toBe('Fujisawa');
+  expect(r.names).toContain('Enoshima');
+  expect(r.names[r.names.length - 1]).toBe('Kamakura');
+  expect(r.approach).toContain('enoshima');
+  expect(r.ahead).toEqual(['cape']);
+  expect(r.behind).toEqual(['enoshima', 'fuji']);
 });
 
 test('stations are about 1 km apart', async ({ page }) => {
@@ -336,7 +360,7 @@ test('Express mode passes about half the stops with a tighter timetable and high
 
   const lim = await page.evaluate(() => ({ express: window.__train.limitAt(300), passed: window.__train.STATIONS.filter((_, i) => i > 0 && !window.__train.stopsAt(i, 'express')).map((s) => s.name) }));
   expect(lim.express).toBe(100); // 85 on Local
-  expect(lim.passed).toEqual(['Kozakura', 'Nanohana', 'Hotarubashi', 'Yuzuhara']);
+  expect(lim.passed).toEqual(['Kugenuma', 'Koshigoe', 'Shichirigahama', 'Hase']);
 
   // Passed stations show a PASS board instead of a STOP mark.
   const pass = await page.evaluate(() => {
@@ -352,7 +376,7 @@ test('Express mode passes about half the stops with a tighter timetable and high
 
   const run = await page.evaluate(autopilot, { mode: 'express' });
   expect(run.state).toBe('end');
-  expect(run.results.map((r) => r.name)).toEqual(['Kawabe', 'Momijidai', 'Shiokaze', 'Tsukimino']);
+  expect(run.results.map((r) => r.name)).toEqual(['Enoshima', 'Kamakura-Kokomae', 'Inamuragasaki', 'Kamakura']);
   for (const r of run.results) {
     expect(r.failed, `${r.name} overrun`).toBe(false);
     expect(Math.abs(r.d), `${r.name} stop error (m)`).toBeLessThan(5);
@@ -384,7 +408,7 @@ test('painted pastoral scenes with light that shifts from morning to evening', a
     const end = T.STATIONS[T.STATIONS.length - 1].pos;
     return { morning, evening, phases: [0, end / 2, end].map((p) => T.lightAt(p).phase), scene: T.scene.cur };
   });
-  expect(['paddies', 'forest', 'seaside']).toContain(r.scene);
+  expect(['town', 'pines', 'seaside', 'temple']).toContain(r.scene);
   expect(r.phases).toEqual(['morning', 'midday', 'evening']);
   expect(r.evening[0] - r.evening[2]).toBeGreaterThan(r.morning[0] - r.morning[2]); // warmer sky at the end of the line
 });
