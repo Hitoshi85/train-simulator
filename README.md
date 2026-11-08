@@ -2,18 +2,13 @@
 
 ## Play now
 
-| Site | Link (bookmark this) | What it is |
-|---|---|---|
-| **Prod** | https://hitoshi85.github.io/train-simulator/ | Stable version, changes only when Hitoshi types "Ship" |
-| **Dev** | https://hitoshi85.github.io/train-simulator/dev/ | Latest merged changes, marked "DEV" |
-
-Both work on phones and switch to a new version on their own, no hard refresh needed.
-Current versions (updated automatically after every deploy):
-
 <!-- play-links:start -->
-- **Prod** (stable, promoted with "Ship"): https://hitoshi85.github.io/train-simulator/?v=3a22128 ([prod-1](https://github.com/Hitoshi85/train-simulator/releases/tag/prod-1))
-- **Dev** (latest main, may be unfinished, marked "DEV"): https://hitoshi85.github.io/train-simulator/dev/?v=aa99d03
+- **Prod** (prod-1, 3a22128): https://hitoshi85.github.io/train-simulator/
+- **Dev** (aa99d03): https://hitoshi85.github.io/train-simulator/dev/
 <!-- play-links:end -->
+
+Prod is the stable version and changes only on "Ship". Dev has every merged change and shows a
+"DEV" tag. Both work on phones and update on their own, no hard refresh needed.
 
 A tiny, original train-driving game for the browser. Plain HTML/CSS/JS, no build step.
 

@@ -198,15 +198,13 @@ jobs:
       - name: Update the play links in README.md
         run: |
           set -euo pipefail
-          prod_link="${SITE}?v=${PROD_SHA:0:7}"
-          dev_link="${SITE}dev/?v=${DEV_SHA:0:7}"
-          repo="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+          # README shows each site once, as its plain link; only the version labels change.
           block=$(printf '%s\n' '<!-- play-links:start -->' \
-            "- **Prod** (stable, promoted with \"Ship\"): ${prod_link} ([${PROD_TAG}](${repo}/releases/tag/${PROD_TAG}))" \
-            "- **Dev** (latest main, may be unfinished, marked \"DEV\"): ${dev_link}" \
+            "- **Prod** (${PROD_TAG}, ${PROD_SHA:0:7}): ${SITE}" \
+            "- **Dev** (${DEV_SHA:0:7}): ${SITE}dev/" \
             '<!-- play-links:end -->')
           BLOCK="$block" perl -0pi -e 's/<!-- play-links:start -->.*?<!-- play-links:end -->/$ENV{BLOCK}/s' README.md
-          { echo "## Live and verified"; echo "$block" | sed '1d;$d'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo "## Live and verified"; echo "- Prod: ${SITE}?v=${PROD_SHA:0:7}"; echo "- Dev: ${SITE}dev/?v=${DEV_SHA:0:7}"; } >> "$GITHUB_STEP_SUMMARY"
           if git diff --quiet; then echo "README links already current."; exit 0; fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'

@@ -26,8 +26,8 @@
    `version.json` with its commit. The build (`.github/scripts/build-site.sh`) loads `game.js` and
    `style.css` as `?v=<commit>` and adds a tiny check that reloads the page once when `version.json`
    shows a newer deploy, so phones get the latest version without a hard refresh. Then **verify-live** checks both live sites serve the right commit
-   and that the game starts. The **links** job then rewrites the play links in `README.md` (with
-   `?v=<short-sha>` to skip phone caches) and comments the dev link on the merged PR.
+   and that the game starts. The **links** job then updates the version labels next to the prod and dev links at the top of
+   `README.md` and comments the dev link (with `?v=<short-sha>`) on the merged PR.
    - **Ship:** when the owner types "Ship", Claude runs the workflow with action `ship` (Actions →
      Deploy to GitHub Pages → Run workflow). It tags the commit dev serves as the next `prod-N`,
      publishes a GitHub release with notes since the last one, and moves the `prod` tag.
