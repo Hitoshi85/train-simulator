@@ -1,15 +1,25 @@
 # Aozora Line – Train Driver
 
-A tiny, original train-driving game for the browser. Plain HTML/CSS/JS, no build step.
+## Play now
 
-## Play
+| Site | Link (bookmark this) | What it is |
+|---|---|---|
+| **Prod** | https://hitoshi85.github.io/train-simulator/ | Stable version, changes only when Hitoshi types "Ship" |
+| **Dev** | https://hitoshi85.github.io/train-simulator/dev/ | Latest merged changes, marked "DEV" |
 
-Open `index.html` in any modern browser, or play the web builds (links updated automatically after every deploy):
+Both work on phones and switch to a new version on their own, no hard refresh needed.
+Current versions (updated automatically after every deploy):
 
 <!-- play-links:start -->
 - **Prod** (stable, promoted with "Ship"): https://hitoshi85.github.io/train-simulator/?v=3a22128 ([prod-1](https://github.com/Hitoshi85/train-simulator/releases/tag/prod-1))
 - **Dev** (latest main, may be unfinished, marked "DEV"): https://hitoshi85.github.io/train-simulator/dev/?v=ffc1cab
 <!-- play-links:end -->
+
+A tiny, original train-driving game for the browser. Plain HTML/CSS/JS, no build step.
+
+## Play
+
+Open `index.html` in any modern browser, or play the web builds linked at the top of this page.
 
 Every merge to `main` goes to **dev** only. Typing "Ship" in the project chat promotes the version dev
 serves to **prod** as a tagged GitHub release (`prod-1`, `prod-2`, …), so a rollback is one click.

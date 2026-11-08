@@ -68,6 +68,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 
 | Date | Change | PR |
 |---|---|---|
+| 2026-11-08 | README opens with a "Play now" table: the prod and dev links to bookmark, then the current version of each (kept current by the deploy) | this PR |
 | 2026-11-08 | Fix the post-deploy phone check: it expected exactly 7 touch buttons, but the Feedback button made 8, so the first dev/prod deploy was marked failed although both sites were live | this PR |
 | 2026-11-08 | Dev and prod sites: merges go to dev (`/dev/`, marked with a DEV tag and title), "Ship" promotes dev to prod as a `prod-N` release with one-click rollback, live check on both, latest links kept in README.md; both sites phone friendly and self-updating without a hard refresh | this PR |
 | 2026-11-07 | Basic browser train-driving game: notches, speed limits, 4 stops, stop-on-mark scoring | [#1](https://github.com/Hitoshi85/train-simulator/pull/1) |
@@ -147,6 +148,7 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-08 | Question: how should the dev game show it is dev? (options: small DEV tag in a corner, no marker, tags on both) | Hitoshi chose no marker: dev and prod look the same; `version.json` on each site names its commit (W16). |
 | 2026-11-08 | "Make sure that both dev and prod are mobile friendly and does not require a hard refresh to play the latest version." | Added to the dev/prod PR: commit-versioned assets, no-cache page, a version check that reloads once onto a newer deploy, and phone checks on both sites (W17). |
 | 2026-11-08 | "Make dev link clear that it is dev." (changes the earlier no-marker choice) | Dev now shows a small "DEV <commit>" tag at the top centre, ignoring taps, and "DEV" in the page title; prod is unchanged (W16). |
+| 2026-11-08 | "Update dev/prod links in README.md." | The deploy had already updated them (prod 3a22128, dev ffc1cab); moved them to the top of the README as a "Play now" table with the plain links to bookmark plus the current versions. |
 
 ## 4. Open backlog
 
