@@ -99,12 +99,47 @@
     return a;
   }
 
+  // ---------- Saved progress (on this device, in localStorage) ----------
+  // One versioned JSON record, so it can later move to a cloud account as-is:
+  // { v, settings: { mode, muted }, best: { local|express: { score, rank, at } }, run: null | { mode, seg, clock, ... } }
+  const save = (() => {
+    const KEY = 'aozora.save', V = 1;
+    const blank = () => ({ v: V, settings: { mode: 'local', muted: false }, best: {}, run: null });
+    let data = blank();
+    function load() {
+      data = blank();
+      try {
+        const raw = JSON.parse(localStorage.getItem(KEY) || 'null');
+        if (raw && raw.v === V) data = { ...data, ...raw, settings: { ...data.settings, ...raw.settings } };
+        else if (localStorage.getItem('aozora.muted') === '1') data.settings.muted = true; // before saves existed
+      } catch { /* storage blocked or corrupt: start fresh */ }
+      return data;
+    }
+    function write() { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch { /* storage blocked */ } }
+    load();
+    return {
+      KEY, V, load, write,
+      get data() { return data; },
+      setting(k, val) { data.settings[k] = val; write(); },
+      setRun(run) { data.run = run; write(); },
+      // Keeps the higher score for a mode; returns true when it is a new best.
+      record(mode, score, rank) {
+        const b = data.best[mode];
+        if (b && b.score >= score) return false;
+        data.best[mode] = { score, rank, at: new Date().toISOString() };
+        write(); return true;
+      },
+      clear() { data = blank(); write(); },
+    };
+  })();
+  const rankOf = (score, mode) => { const pct = score / (stopCount(mode) * 2200); return pct > 0.85 ? 'S' : pct > 0.7 ? 'A' : pct > 0.5 ? 'B' : pct > 0.3 ? 'C' : 'D'; };
+
   // ---------- Game state ----------
   let g;
   function reset() {
     g = {
       state: 'title', // title | ready | running | arrived | end
-      mode: g ? g.mode : 'local', // local | express (kept when playing again)
+      mode: g ? g.mode : (save.data.settings.mode === 'express' ? 'express' : 'local'), // kept when playing again
       passed: [],                 // stations passed without stopping (Express)
       pos: 0, v: 0, lever: -B_MAX,
       seg: 1,                     // index of the station we're heading to (set by setMode)
@@ -130,7 +165,7 @@
   reset();
   setMode('local');
 
-  function setMode(m) { g.mode = m; LIMITS = m === 'express' ? EXPRESS_LIMITS : LOCAL_LIMITS; g.seg = nextStop(0); }
+  function setMode(m) { g.mode = m; if (save.data.settings.mode !== m) save.setting('mode', m); LIMITS = m === 'express' ? EXPRESS_LIMITS : LOCAL_LIMITS; g.seg = nextStop(0); }
   function nextStop(i) { do i++; while (i < STATIONS.length - 1 && !stopsAt(i, g.mode)); return i; }
   function startSegment() {
     const st = STATIONS[g.seg];
@@ -158,6 +193,28 @@
     g.results.push(g.lastResult);
     g.state = 'arrived';
     g.timer = 0; g.msgT = 0;
+    if (g.seg < STATIONS.length - 1) saveRun(); else finishRun();
+  }
+  // Remembers the run at the station just reached, so it can be resumed after the page closes.
+  function saveRun() {
+    save.setRun({ mode: g.mode, seg: g.seg, pos: g.pos, clock: g.clock, sched: g.sched, score: g.score,
+      results: g.results, passed: g.passed, wx: g.wx, wxSaid: g.wxSaid, savedAt: new Date().toISOString() });
+  }
+  function finishRun() {
+    save.setRun(null);
+    g.newBest = save.record(g.mode, g.score, rankOf(g.score, g.mode));
+  }
+  // Puts a saved run back: the train waits at the station it last stopped at, ready to depart.
+  function resumeRun() {
+    const r = save.data.run;
+    if (!r || !STATIONS[r.seg] || r.seg >= STATIONS.length - 1) { save.setRun(null); return false; }
+    setMode(r.mode === 'express' ? 'express' : 'local');
+    Object.assign(g, { seg: r.seg, pos: r.pos, v: 0, lever: -B_MAX, clock: r.clock, sched: r.sched, score: r.score,
+      results: r.results || [], passed: r.passed || [], wx: r.wx || g.wx, wxSaid: r.wxSaid || 0 });
+    g.lastResult = g.results[g.results.length - 1];
+    g.state = 'arrived'; g.resumed = true;
+    flash('Welcome back at ' + STATIONS[r.seg].name, 2.5);
+    return true;
   }
 
   function update(dt) {
@@ -203,9 +260,7 @@
   // ---------- Sound (all generated with Web Audio: no audio files, original tunes) ----------
   const sound = (() => {
     const AC = window.AudioContext || window.webkitAudioContext;
-    const KEY = 'aozora.muted';
-    let muted = false;
-    try { muted = localStorage.getItem(KEY) === '1'; } catch { /* storage blocked */ }
+    let muted = !!save.data.settings.muted;
     let ac = null, master, sfx, music, noise, motor, motorGain, motorFilter, roll, hiss;
     let prevState = '', prevLever = 0, joint = 0, beepT = 0, nextNote = 0, stepN = 0;
     const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
@@ -313,7 +368,7 @@
 
     function toggle() {
       muted = !muted;
-      try { localStorage.setItem(KEY, muted ? '1' : '0'); } catch { /* storage blocked */ }
+      save.setting('muted', muted);
       if (ac) master.gain.setTargetAtTime(muted ? 0 : 0.8, ac.currentTime, 0.05);
       syncButton();
     }
@@ -368,6 +423,7 @@
     if (a === 'pause') { setPaused(!g.paused); return; }
     if (g.paused) { if (a === 'enter') setPaused(false); return; } // only resume while paused
     if (a === 'enter') {
+      if (g.state === 'title' && save.data.run && resumeRun()) return;
       if (g.state === 'title') { g.state = 'ready'; startSegment(); flash('Doors closed. Off we go on P1!', 3); }
       else if (g.state === 'arrived') {
         if (g.seg >= STATIONS.length - 1) { g.state = 'end'; }
@@ -376,6 +432,10 @@
           g.seg = nextStop(g.seg); startSegment();
         }
       } else if (g.state === 'end') { reset(); setMode(g.mode); }
+      return;
+    }
+    if (g.state === 'title' && save.data.run) { // a saved run: Enter continues it, N starts over
+      if (a === 'neutral') { save.setRun(null); flash('Saved run cleared. Pick a mode.', 2); }
       return;
     }
     if (g.state === 'title') { // ▲/▼ (or L/E) pick the mode on the title screen
@@ -1465,6 +1525,10 @@
     }
   }
 
+  function bestLine() {
+    const b = save.data.best, f = (m) => (b[m] ? `${b[m].score} (${b[m].rank})` : '—');
+    return { t: `Best · Local ${f('local')}  ·  Express ${f('express')}`, c: '#9da7b3' };
+  }
   function panel(lines, title) {
     const pw = 520, ph = 60 + lines.length * 26, px = (W - pw) / 2, py = (VIEW_H - ph) / 2;
     ctx.fillStyle = 'rgba(10,14,20,.88)'; ctx.fillRect(px, py, pw, ph);
@@ -1487,7 +1551,15 @@
       ctx.fillStyle = '#ffd33d'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(g.msg, W / 2, 82); ctx.globalAlpha = 1;
     }
-    if (g.state === 'title') {
+    if (g.state === 'title' && save.data.run) {
+      const r = save.data.run;
+      panel([
+        { t: `${MODE_NAMES[r.mode] || 'Local'} run saved at ${STATIONS[r.seg].name}`, c: '#7ee787' },
+        `Score so far: ${r.score} after ${(r.results || []).length} stops`,
+        bestLine(),
+        { t: 'Enter or tap: continue  ·  N: new run', c: '#ffd33d' },
+      ], 'AOZORA LINE · Welcome back');
+    } else if (g.state === 'title') {
       const ex = g.mode === 'express';
       panel([
         { t: (ex ? '   Local      ▶ EXPRESS ◀' : '▶ LOCAL ◀      Express   '), c: ex ? '#ff9f5a' : '#7ee787' },
@@ -1495,6 +1567,7 @@
           : `Local: stops at all ${stopCount('local')} stations.`,
         'Obey speed limits, stop on the yellow STOP mark, arrive on time.',
         '↑/W: more power   ↓/S: more brake   N: neutral   Space: EB',
+        bestLine(),
         { t: '▲/▼ (or L / E) choose mode · Enter or tap to start', c: '#ffd33d' },
       ], 'AOZORA LINE · Train Driver');
     } else if (g.state === 'arrived') {
@@ -1510,11 +1583,11 @@
       lines.push({ t: g.seg >= STATIONS.length - 1 ? 'Press Enter for final results' : 'Press Enter to depart', c: '#ffd33d' });
       panel(lines, 'Arrived at ' + r.name);
     } else if (g.state === 'end') {
-      const max = stopCount(g.mode) * 2200;
-      const pct = g.score / max;
-      const rank = pct > 0.85 ? 'S' : pct > 0.7 ? 'A' : pct > 0.5 ? 'B' : pct > 0.3 ? 'C' : 'D';
+      const rank = rankOf(g.score, g.mode);
       const lines = g.results.map((r) => `${r.name}: ${r.failed ? 'overrun' : r.total + ' pts'}`);
       lines.push({ t: `Total ${g.score}  ·  Rank ${rank}`, c: '#7ee787' });
+      const b = save.data.best[g.mode];
+      lines.push(g.newBest ? { t: `New best for ${MODE_NAMES[g.mode]}!`, c: '#ffd33d' } : { t: `Best ${MODE_NAMES[g.mode]}: ${b ? b.score + ' · Rank ' + b.rank : '—'}`, c: '#c9d1d9' });
       lines.push({ t: 'Press Enter to play again', c: '#ffd33d' });
       panel(lines, `End of the line! · ${MODE_NAMES[g.mode]}`);
     }
@@ -1549,7 +1622,7 @@
   }
 
   // Exposed for automated testing: set paused = true, then drive the game with step(dt) and render().
-  const hook = { get state() { return g; }, scene, stats, act, step, render, renderCam, paused: false, setPaused, sound, STATIONS, get LIMITS() { return LIMITS; }, GRADES, accel, limitAt, gradeAt, catsBetween, lightAt, stopsAt, ROUTE, mapAt, weatherAt, feedbackUrl,
+  const hook = { get state() { return g; }, save, scene, stats, act, step, render, renderCam, paused: false, setPaused, sound, STATIONS, get LIMITS() { return LIMITS; }, GRADES, accel, limitAt, gradeAt, catsBetween, lightAt, stopsAt, ROUTE, mapAt, weatherAt, feedbackUrl,
     setWeather(kind, from = 0, to = 1e9) { g.wx = { kind, from, to }; }, // 'rain', 'snow' or 'clear' between two positions
     drawView(view) { drawWorld(view); }, // draw one camera's view full size (for screenshots and tests)
   };
