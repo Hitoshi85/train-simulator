@@ -195,3 +195,34 @@ test('M key and Sound button toggle mute, remembered across reloads', async ({ p
   for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowUp');
   await page.waitForTimeout(1500);
 });
+
+test('painted pastoral scenes with light that shifts from morning to evening', async ({ page }) => {
+  const r = await page.evaluate(() => {
+    const T = window.__train;
+    T.paused = true;
+    T.act('enter');
+    const sky = () => { const d = document.getElementById('game').getContext('2d').getImageData(300, 40, 1, 1).data; return [d[0], d[1], d[2]]; };
+    T.state.pos = 0; T.render(); const morning = sky();
+    T.state.pos = 8500; T.render(); const evening = sky();
+    const end = T.STATIONS[T.STATIONS.length - 1].pos;
+    return { morning, evening, phases: [0, end / 2, end].map((p) => T.lightAt(p).phase), scene: T.scene.cur };
+  });
+  expect(['paddies', 'forest', 'seaside']).toContain(r.scene);
+  expect(r.phases).toEqual(['morning', 'midday', 'evening']);
+  expect(r.evening[0] - r.evening[2]).toBeGreaterThan(r.morning[0] - r.morning[2]); // warmer sky at the end of the line
+});
+
+test('living world: trees, birds and evening fireflies are drawn', async ({ page }) => {
+  const r = await page.evaluate(() => {
+    const T = window.__train;
+    T.paused = true;
+    T.act('enter');
+    const s0 = { ...T.stats };
+    T.state.pos = 8400; // evening, near the last station
+    for (let i = 0; i < 5; i++) T.render();
+    return { trees: T.stats.trees - s0.trees, birds: T.stats.birds - s0.birds, fireflies: T.stats.fireflies - s0.fireflies };
+  });
+  expect(r.trees).toBeGreaterThan(0);
+  expect(r.birds).toBeGreaterThan(0);
+  expect(r.fireflies).toBeGreaterThan(0);
+});

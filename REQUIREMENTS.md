@@ -7,7 +7,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 - **Play (desktop or phone):** https://hitoshi85.github.io/train-simulator/ (add `?v=<short commit>`
   on a phone to skip a cached copy)
 - **Backlog:** [open issues](https://github.com/Hitoshi85/train-simulator/issues)
-- **Last updated:** 2026-11-07
+- **Last updated:** 2026-11-08
 
 ## 1. Core requirements
 
@@ -23,11 +23,14 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | R6 | Stop-on-the-mark scoring at each station: up to 1000 for accuracy (+500 under 30 cm), up to 500 for punctuality, +200 for a smooth stop on B1–B3, 0 for overrunning the mark by 30 m. | Done |
 | R7 | Cats appear frequently: lots of cats beside the track and on platforms ("cats everywhere"). Original cats only. | Done |
 | R8 | Cat-spotting counter ("Cats spotted", top left); each cat passed is worth +2 points at the next station. | Done (rebalance #5 dropped by owner, 2026-11-08) |
-| R9 | Scenery changes every 10 seconds, picked at random with a short fade, between three dramatic scenes: Snowy Peaks (mountain), Red-Rock Canyon (desert), Coastal Cliffs (ocean). | Done |
+| R9 | Scenery changes every 10 seconds, picked at random with a short fade, between three pastoral scenes: Rice Paddy Valley, Forest Hills, Seaside Town (replaced Snowy Peaks, Red-Rock Canyon and Coastal Cliffs in the painted-look PR). | Done (this PR) |
 | R10 | Playable on a phone from a shareable web link that always shows the latest version (no stale cache). | Done (phone comfort in #10) |
 | R11 | Live camera insets in the top-right of the view, always on: FRONT CAM (outside camera ahead of the train looking back at its nose and side) and REAR CAM (from the tail looking back down the track). Rendered by the game, not real video. | Done (this PR) |
 | R12 | Platform camera inset that appears in sync as the train approaches each station (last 500 m), showing the train pulling in. | Done (this PR) |
 | R13 | Original synthesized sound with Web Audio, no audio files or copyrighted tunes: motor hum following speed, rolling noise, rail-joint clacks, brake hiss, lever clicks, overspeed beep, departure door chime, arrival melody, end jingle, and an original looping background tune. Mute with the M key or a "Sound" button, remembered in localStorage; audio starts only after the first key/tap. Closes #8. | Done (this PR) |
+| R14 | Hand-painted pastoral look inspired by the soft style of Japanese animated films, with original art only (no characters, creatures or scenes from any film): watercolour skies with towering clouds, layered hazy hills, lush greenery, warm light and paper grain. Covers scenery, stations, the train and cats; the dashboard stays clean. | Done (this PR) |
+| R15 | Light shifts along the line: morning at Hinata, bright midday mid-line, a golden evening near Tsukimino. | Done (this PR) |
+| R16 | Rich living world: drifting clouds, flocks of birds, swaying trees and grass, wildflowers, drifting petals by day, rippling rice paddies, washing lines, sailboats, sun rays and fireflies in the evening. | Done (this PR) |
 
 ### How we work
 
@@ -43,6 +46,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | W8 | Show results (e.g. test runs) in simple tables when asked. | Preference |
 | W9 | Use several focused subagents in parallel for independent parts of a task, keeping token use balanced (few agents, small prompts). | In place |
 | W10 | When asking for approval on backlog items, ask one item at a time with 3 options, and always include an option to remove the item from the backlog without doing it (the issue is closed as not planned). | In place |
+| W11 | With each PR, share a screenshot of the game that highlights the new feature. | In place (2026-11-08) |
 
 ## 2. Shipped changes
 
@@ -54,7 +58,8 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | 2026-11-07 | CI (lint + headless autopilot test), tested Pages deploy, issue and PR templates | [#4](https://github.com/Hitoshi85/train-simulator/pull/4) |
 | 2026-11-07 | Rule: share the latest mobile link after every shipped change | [#13](https://github.com/Hitoshi85/train-simulator/pull/13) |
 | 2026-11-07 | This requirements and feedback log | [#14](https://github.com/Hitoshi85/train-simulator/pull/14) |
-| 2026-11-07 | 4 new stations (9 stations, about 1 km apart); live front, rear and platform camera insets; original synthesized sound, chimes and background music with mute (M / Sound button). Closes #8 | (this PR) |
+| 2026-11-07 | 4 new stations (9 stations, about 1 km apart); live front, rear and platform camera insets; original synthesized sound, chimes and background music with mute (M / Sound button). Closes #8 | [#15](https://github.com/Hitoshi85/train-simulator/pull/15) |
+| 2026-11-08 | Hand-painted pastoral look: watercolour sky and clouds, three pastoral scenes, morning-to-evening light along the line, living details (birds, swaying trees and grass, petals, paddies, sailboats, fireflies), repainted stations and train. Preview: [docs/screens/painted-look.png](docs/screens/painted-look.png) | (this PR) |
 
 ## 3. Feedback log
 
@@ -80,6 +85,9 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-07 | New standing rule: always use multiple subagents that work in parallel, but balance token usage. | Implemented in this PR (W9, CLAUDE.md). |
 | 2026-11-08 | Show the backlog and ask for approval on each item. | Reviewed one at a time. Approved: #10, #7, #9 as written; #11 changed to skip about half of the 8 stops (not one), since the line now has 9 stations. Skipped for now: #12, until the restyle lands. Removed (closed as not planned): #5, #6. |
 | 2026-11-08 | For the backlog, always include an option to remove an item without addressing it. | New standing rule W10. |
+| 2026-11-08 | "Change graphics to Ghibli style." | Built as an original hand-painted pastoral look (R14), no film characters, creatures or scenes. |
+| 2026-11-08 | Answers: scenery plus train and stations (dashboard stays clean); light shifts along the line (morning, midday, evening); rich living world; swap the three scenes for pastoral ones (rice paddies, forest hills, seaside town). | Implemented in the painted-look PR (R9, R14–R16). |
+| 2026-11-08 | New standing rule: with each PR, share a screenshot of the game and highlight the new feature. | Rule W11; this PR includes [docs/screens/painted-look.png](docs/screens/painted-look.png). |
 
 ## 4. Open backlog
 
