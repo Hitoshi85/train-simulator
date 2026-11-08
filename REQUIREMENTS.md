@@ -51,6 +51,8 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | W9 | Use several focused subagents in parallel for independent parts of a task, keeping token use balanced (few agents, small prompts). | In place |
 | W10 | When asking for approval on backlog items, ask one item at a time with 3 options, and always include an option to remove the item from the backlog without doing it (the issue is closed as not planned). | In place |
 | W11 | With each PR, share a screenshot of the game that highlights the new feature. | In place (2026-11-08) |
+| W12 | Automatic phone and speed checks on every PR: CI takes phone screenshots (portrait 390×844 and landscape 844×390, title and mid-run; artifact `phone-screenshots`) and fails a PR if the median time to draw one frame at phone size is over 16 ms (60 fps). Frame times appear in the CI job summary. | In place (this PR) |
+| W13 | An automated review agent (Claude Code GitHub Action, check "Claude review") reviews every PR for bugs, posts inline and summary comments, and fails the check only for a must-fix problem. Needs a `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` repo secret; skipped (green) until one is added. | Workflow in place (this PR); sign-in deferred by Hitoshi, reviews skip until a secret is added |
 
 ## 2. Shipped changes
 
@@ -66,7 +68,8 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | 2026-11-08 | Phone layout without scrolling in portrait and landscape, bigger touch buttons, help hidden on touch (closes #10); pause with P / Esc / button and auto-pause on tab switch (closes #7) | [#17](https://github.com/Hitoshi85/train-simulator/pull/17) |
 | 2026-11-08 | Uphill and downhill gradients (up to ±25‰) that change acceleration, gradient posts beside the track and a GRADIENT readout on the dashboard; stations are level. Closes #9 | [#18](https://github.com/Hitoshi85/train-simulator/pull/18) |
 | 2026-11-08 | Express mode: pick Local or Express on the title screen; Express passes 4 of the 8 stops, runs a tighter timetable and has higher limits on open track. Closes #11 | (this PR) |
-| 2026-11-08 | Hand-painted pastoral look: watercolour sky and clouds, three pastoral scenes, morning-to-evening light along the line, living details (birds, swaying trees and grass, petals, paddies, sailboats, fireflies), repainted stations and train. Preview: [docs/screens/painted-look.png](docs/screens/painted-look.png) | (this PR) |
+| 2026-11-08 | Hand-painted pastoral look: watercolour sky and clouds, three pastoral scenes, morning-to-evening light along the line, living details (birds, swaying trees and grass, petals, paddies, sailboats, fireflies), repainted stations and train. Preview: [docs/screens/painted-look.png](docs/screens/painted-look.png) | [#19](https://github.com/Hitoshi85/train-simulator/pull/19) |
+| 2026-11-08 | CI phone screenshots and a 16 ms frame-draw budget at phone size on every PR; Claude review agent workflow | (this PR) |
 
 ## 3. Feedback log
 
@@ -100,8 +103,12 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-08 | New shorthand: a message of only "m" means merge the PR. Hitoshi sent "M" for the Express PR. | Express PR rebased onto #17 and #18 and merged once CI was green. |
 | 2026-11-08 | "Change graphics to Ghibli style." | Built as an original hand-painted pastoral look (R18), no film characters, creatures or scenes. |
 | 2026-11-08 | Answers: scenery plus train and stations (dashboard stays clean); light shifts along the line (morning, midday, evening); rich living world; swap the three scenes for pastoral ones (rice paddies, forest hills, seaside town). | Implemented in the painted-look PR (R9, R18–R20). |
-| 2026-11-08 | New standing rule: with each PR, share a screenshot of the game and highlight the new feature. | Rule W11; this PR includes [docs/screens/painted-look.png](docs/screens/painted-look.png). |
+| 2026-11-08 | New standing rule: with each PR, share a screenshot of the game and highlight the new feature. | Rule W11; #19 includes [docs/screens/painted-look.png](docs/screens/painted-look.png). |
 | 2026-11-08 | Hitoshi sent "M" for the painted-look PR. | Merged the painted-look PR (#19) after bringing in #17, #18 and #20, once CI was green. |
+| 2026-11-08 | Asked whether the setup is fully agentic; approved all six proposed upgrades, then dropped the daily backlog routine (item 3). | Auto-merge, merge queue and post-deploy check built in a separate PR; phone screenshots, frame budget and review agent built in this PR (W12, W13). |
+| 2026-11-08 | Hitoshi wants to talk only in the project chat (one orchestrator), not in each thread. | Threads send questions, ready PRs and manual steps through the project chat. |
+| 2026-11-08 | Question: how strict should the frame-rate check be? (options: fixed 60 fps budget, no slowdown vs main, report only) | Hitoshi chose the fixed budget: fail over 16 ms median at phone size (W12). |
+| 2026-11-08 | Question: how should the review agent sign in? (options: Claude subscription token, Anthropic API key, not yet) | Hitoshi chose "not yet": the review workflow ships and skips until a secret is added (W13). |
 
 ## 4. Open backlog
 
@@ -118,3 +125,4 @@ Removed by the owner on 2026-11-08 (closed as not planned): [#5](https://github.
 - Extra lines.
 - A native iOS version (SwiftUI + SceneKit) of the same original game.
 - CI posting a test-results table on each PR.
+- Turn on the Claude review agent: add a `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) or `ANTHROPIC_API_KEY` repo secret (deferred by Hitoshi, 2026-11-08).
