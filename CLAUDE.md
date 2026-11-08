@@ -7,15 +7,19 @@ GitHub Pages deploys `index.html`, `game.js`, `style.css` (and `assets/` if pres
 ## Working on a task
 
 1. Each task is a GitHub issue labelled `task` with a **Done when** list. Work only on that issue.
-2. Branch from `main`, keep the PR small, and put `Closes #N` in the PR body.
-3. Run `npm ci` once, then `npm run check` (ESLint + Playwright smoke test) before every push.
+2. Before building, ask the owner clarifying questions one at a time, each with 3 options and a
+   recommendation.
+3. Use a few focused subagents in parallel for independent parts of a task; keep token use
+   balanced (few agents, small prompts).
+4. Branch from `main`, keep the PR small, and put `Closes #N` in the PR body.
+5. Run `npm ci` once, then `npm run check` (ESLint + Playwright smoke test) before every push.
    Locally, Chromium is usually preinstalled; in CI the workflow installs it.
-4. Add or extend a test in `tests/` for new behaviour whenever it can be checked headlessly.
-5. If `game.js` or `style.css` changed, bump `?v=N` on both asset URLs in `index.html` so
+6. Add or extend a test in `tests/` for new behaviour whenever it can be checked headlessly.
+7. If `game.js` or `style.css` changed, bump `?v=N` on both asset URLs in `index.html` so
    browsers load the new version.
-6. Open the PR, wait for CI, fix failures until green. Never skip or weaken a test to get green.
-7. The owner merges. Do not merge or enable auto-merge unless the owner said so for that PR or label.
-8. After every shipped change (PR merged and the Pages deploy green), always share the latest
+8. Open the PR, wait for CI, fix failures until green. Never skip or weaken a test to get green.
+9. The owner merges. Do not merge or enable auto-merge unless the owner said so for that PR or label.
+10. After every shipped change (PR merged and the Pages deploy green), always share the latest
    mobile play link with a cache-busting suffix of the deployed commit's short SHA:
    `https://hitoshi85.github.io/train-simulator/?v=<short-sha>`
 
@@ -23,7 +27,8 @@ GitHub Pages deploys `index.html`, `game.js`, `style.css` (and `assets/` if pres
 
 `game.js` exposes `window.__train` for tests: `state` (live game state), `act(action)`,
 `step(dt)` (advance the simulation), `render()` (draw one frame), `paused` (stop the real-time loop),
-`stats` (`frames`, `catsDrawn`), plus `STATIONS`, `LIMITS`, `accel`, `limitAt`, `catsBetween`.
+`stats` (`frames`, `catsDrawn`, `trainDrawn`, `insets` (count per camera id: front, rear, platform),
+`lastInsets` (ids of insets drawn in the last frame)), `sound` (`muted`, `started`, `toggle()`), plus `STATIONS`, `LIMITS`, `accel`, `limitAt`, `catsBetween`.
 Keep it working when refactoring; add to it when a new feature needs checking.
 `tests/smoke.spec.js` has an `autopilot()` that drives the full line through `act()`.
 

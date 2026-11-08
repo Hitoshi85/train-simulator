@@ -100,7 +100,7 @@ test('keyboard controls move the lever', async ({ page }) => {
 test('autopilot drives the whole line and scores every stop', async ({ page }) => {
   const run = await page.evaluate(autopilot);
   expect(run.state).toBe('end');
-  expect(run.results).toHaveLength(4);
+  expect(run.results).toHaveLength(8);
   for (const r of run.results) {
     expect(r.failed, `${r.name} overrun`).toBe(false);
     expect(Math.abs(r.d), `${r.name} stop error (m)`).toBeLessThan(5);
@@ -146,4 +146,52 @@ test('scenery changes every 10 seconds', async ({ page }) => {
     return { first, now: T.scene.cur };
   });
   expect(r.now).not.toBe(r.first);
+});
+
+test('stations are about 1 km apart', async ({ page }) => {
+  const st = await page.evaluate(() => window.__train.STATIONS.map((s) => s.pos));
+  expect(st).toHaveLength(9);
+  for (let i = 1; i < st.length; i++) {
+    expect(st[i] - st[i - 1]).toBeGreaterThanOrEqual(800);
+    expect(st[i] - st[i - 1]).toBeLessThanOrEqual(1400);
+  }
+});
+
+test('front and rear camera insets are always on; platform camera appears near a station', async ({ page }) => {
+  const r = await page.evaluate(() => {
+    const T = window.__train;
+    T.paused = true;
+    T.act('enter');
+    const at = (d) => {
+      T.state.pos = T.STATIONS[1].pos - d;
+      const before = T.stats.trainDrawn;
+      T.render();
+      return { insets: [...T.stats.lastInsets], train: T.stats.trainDrawn - before };
+    };
+    return { far: at(800), near: at(200), stopped: at(0.3) };
+  });
+  expect(r.far.insets).toEqual(['front', 'rear']);
+  expect(r.far.train).toBe(1);          // the front camera shows our train
+  expect(r.near.insets).toEqual(['front', 'rear', 'platform']);
+  expect(r.near.train).toBe(2);         // ...and so does the platform camera
+  expect(r.stopped.insets).toContain('platform');
+});
+
+test('M key and Sound button toggle mute, remembered across reloads', async ({ page }) => {
+  const muted = () => page.evaluate(() => window.__train.sound.muted);
+  expect(await muted()).toBe(false);
+  await page.keyboard.press('KeyM');
+  expect(await muted()).toBe(true);
+  expect(await page.evaluate(() => window.__train.sound.started)).toBe(true); // audio starts on first input
+  await expect(page.locator('#mute')).toHaveText(/off/);
+  await page.reload();
+  await page.waitForFunction(() => window.__train && window.__train.stats.frames > 2);
+  expect(await muted()).toBe(true);
+  await page.locator('#mute').click();
+  expect(await muted()).toBe(false);
+  await expect(page.locator('#mute')).toHaveText(/on/);
+  // Let the audio run for a moment while driving: no errors.
+  await page.keyboard.press('Enter');
+  for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowUp');
+  await page.waitForTimeout(1500);
 });
