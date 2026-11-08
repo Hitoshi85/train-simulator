@@ -84,6 +84,40 @@ test('train physics and speed limits behave', async ({ page }) => {
   expect(r.limEnd).toBe(70);
 });
 
+test('gradients: coasting is slower uphill and faster downhill; stations are level', async ({ page }) => {
+  const r = await page.evaluate(() => {
+    const T = window.__train;
+    // Coast in neutral for 20 s from 60 km/h on a constant gradient.
+    const coast = (pm) => { let v = 60 / 3.6; for (let i = 0; i < 400; i++) v = Math.max(0, v + T.accel(0, v, pm) * 0.05); return v; };
+    return {
+      flat: coast(0), up: coast(25), down: coast(-25),
+      hasUp: T.GRADES.some((x) => x.pm > 0), hasDown: T.GRADES.some((x) => x.pm < 0),
+      stationGrades: T.STATIONS.map((s) => [T.gradeAt(s.pos - 200), T.gradeAt(s.pos), T.gradeAt(s.pos + 30)]),
+      gUp: T.accel(0, 10, 0) - T.accel(0, 10, 10),
+    };
+  });
+  expect(r.up).toBeLessThan(r.flat);
+  expect(r.down).toBeGreaterThan(r.flat);
+  expect(r.gUp).toBeCloseTo(0.098, 3); // about g × ‰ / 1000
+  expect(r.hasUp && r.hasDown).toBe(true);
+  for (const g of r.stationGrades) expect(g).toEqual([0, 0, 0]);
+});
+
+test('gradient posts and the dashboard gradient render', async ({ page }) => {
+  const shown = await page.evaluate(() => {
+    const T = window.__train;
+    T.paused = true;
+    T.act('enter');
+    const post = T.GRADES.find((x) => x.pm > 0);
+    T.state.pos = post.at - 100; // the post marking the climb is 100 m ahead
+    const before = T.stats.gradePostsDrawn;
+    T.render();
+    return { posts: T.stats.gradePostsDrawn - before, here: T.gradeAt(post.at + 1) };
+  });
+  expect(shown.posts).toBeGreaterThan(0);
+  expect(shown.here).toBeGreaterThan(0);
+});
+
 test('keyboard controls move the lever', async ({ page }) => {
   await page.keyboard.press('Enter');
   await expect.poll(() => page.evaluate(() => window.__train.state.state)).toBe('running');

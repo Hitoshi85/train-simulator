@@ -30,23 +30,38 @@
     { at: 4350, lim: 75 }, { at: 5300, lim: 60 }, { at: 6150, lim: 90 },
     { at: 7900, lim: 70 },
   ];
+  // Gradients in per mille (‰): + uphill, - downhill, from `at` until the next entry.
+  // Stations sit on level track so stopping on the mark stays fair.
+  const GRADES = [
+    { at: 0, pm: 0 }, { at: 200, pm: 10 }, { at: 550, pm: 0 },
+    { at: 1100, pm: -15 }, { at: 1500, pm: 0 },
+    { at: 2000, pm: 20 }, { at: 2450, pm: -10 }, { at: 2700, pm: 0 },
+    { at: 3200, pm: 25 }, { at: 3600, pm: 0 }, { at: 3700, pm: -20 }, { at: 3950, pm: 0 },
+    { at: 4400, pm: -25 }, { at: 4800, pm: 0 },
+    { at: 5300, pm: 15 }, { at: 5700, pm: 0 },
+    { at: 6200, pm: -10 }, { at: 6600, pm: 25 }, { at: 7000, pm: 0 },
+    { at: 7500, pm: -25 }, { at: 8000, pm: -10 }, { at: 8300, pm: 0 },
+  ];
   const TRAIN_LEN = 80;      // 4 cars of 20 m
   const DWELL = 30;          // scheduled seconds at each station
   const CAT_BONUS = 2; // points per cat spotted on the way
 
   const limitAt = (p) => { let l = LIMITS[0].lim; for (const s of LIMITS) if (p >= s.at) l = s.lim; return l; };
+  const gradeAt = (p) => { let v = GRADES[0].pm; for (const s of GRADES) if (p >= s.at) v = s.pm; return v; };
   const curvature = (p) => 0.0007 * Math.sin(p / 520) * Math.sin(p / 1300 + 1);
 
   // ---------- Train physics ----------
   // lever: -9 = EB, -8..-1 = B8..B1, 0 = N, 1..5 = P1..P5
   const leverName = (l) => l === -9 ? 'EB' : l < 0 ? 'B' + (-l) : l === 0 ? 'N' : 'P' + l;
-  function accel(lever, v) {
+  // grade in ‰: gravity adds about g × ‰ / 1000 (slows uphill, speeds up downhill).
+  function accel(lever, v, grade = 0) {
     const kmh = v * 3.6;
     let a = 0;
     if (lever > 0) a = lever * 0.17 * (kmh < 40 ? 1 : 40 / kmh);
     else if (lever === -9) a = -1.4;
     else if (lever < 0) a = lever * 0.13;
     a -= 0.02 + 0.00003 * v * v; // rolling + air resistance
+    a -= 9.8 * grade / 1000;
     return a;
   }
 
@@ -96,7 +111,7 @@
     if (g.msgT > 0) g.msgT -= dt;
     if (g.state !== 'running') return;
     g.clock += dt;
-    const a = accel(g.lever, g.v);
+    const a = accel(g.lever, g.v, gradeAt(g.pos));
     g.v = Math.max(0, g.v + a * dt);
     if (g.v === 0 && g.lever <= 0) g.v = 0;
     const before = g.pos;
@@ -449,7 +464,7 @@
     for (let s = Math.ceil(a / CAT_STEP) * CAT_STEP; s < b; s += CAT_STEP) { const c = catAt(s); if (c) out.push(c); }
     return out;
   }
-  const stats = { catsDrawn: 0, frames: 0, trainDrawn: 0, insets: {}, lastInsets: [] }; // render counters for automated tests
+  const stats = { catsDrawn: 0, frames: 0, trainDrawn: 0, gradePostsDrawn: 0, insets: {}, lastInsets: [] }; // render counters for automated tests
   function drawCat(c, p) {
     const s = p.s * 1.4; // cats drawn a bit larger than life so you can spot them
     if (s < 1.2) return;
@@ -537,6 +552,7 @@
       }
     }
     { const [lo, hi] = span(120); for (const c of catsBetween(lo, hi)) objs.push({ z: zOf(c.s), t: 'cat', c }); }
+    for (let i = 1; i < GRADES.length; i++) { const z = zOf(GRADES[i].at); if (z > 0 && z < ZMAX) objs.push({ z, t: 'grade', pm: GRADES[i].pm }); }
     for (const L of LIMITS) { const z = zOf(L.at - 150); if (z > 0 && z < ZMAX) objs.push({ z, t: 'limit', lim: L.lim }); }
     for (let i = 0; i < STATIONS.length; i++) {
       const S = STATIONS[i];
@@ -570,6 +586,20 @@
         ctx.beginPath(); ctx.arc(t.x, t.y, 0.6 * s, 0, 7); ctx.fill(); ctx.stroke();
         ctx.fillStyle = '#111'; ctx.font = `bold ${Math.max(6, 0.6 * s)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(o.lim, t.x, t.y);
+      } else if (o.t === 'grade') {
+        stats.gradePostsDrawn++;
+        // gradient post: a short white board on the left, an arm showing up / down / level and the ‰ value
+        const b = project(-2.6, 0, o.z), t = project(-2.6, 1.8, o.z), s = b.s;
+        ctx.strokeStyle = '#333'; ctx.lineWidth = Math.max(1, 0.08 * s);
+        ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(t.x, t.y); ctx.stroke();
+        const bw = 1.4 * s, bh = 0.9 * s;
+        ctx.fillStyle = '#f4f1e8'; ctx.fillRect(t.x - bw / 2, t.y - bh, bw, bh);
+        ctx.strokeStyle = '#222'; ctx.lineWidth = Math.max(1, 0.06 * s); ctx.strokeRect(t.x - bw / 2, t.y - bh, bw, bh);
+        const dy = o.pm > 0 ? -0.18 : o.pm < 0 ? 0.18 : 0;
+        ctx.lineWidth = Math.max(1, 0.08 * s);
+        ctx.beginPath(); ctx.moveTo(t.x - bw / 2 + 0.1 * s, t.y - bh * 0.72 - dy * s); ctx.lineTo(t.x + bw / 2 - 0.1 * s, t.y - bh * 0.72 + dy * s); ctx.stroke();
+        ctx.fillStyle = '#111'; ctx.font = `bold ${Math.max(5, 0.4 * s)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(o.pm === 0 ? 'L' : String(Math.abs(o.pm)), t.x, t.y - bh * 0.3);
       } else if (o.t === 'platform') {
         const zs = [o.z, Math.min(o.z1, ZMAX)];
         const p = (x, y, z) => project(x, y, z);
@@ -742,6 +772,12 @@
     ctx.fillStyle = '#fff'; ctx.font = 'bold 22px sans-serif';
     ctx.fillText(st.name, ix, y0 + 48);
     ctx.fillText(lim + ' km/h', ix, y0 + 94);
+    // current gradient, beside the speed limit
+    const pm = gradeAt(g.pos);
+    ctx.fillStyle = '#9da7b3'; ctx.font = '13px sans-serif'; ctx.fillText('GRADIENT', ix + 130, y0 + 70);
+    ctx.fillStyle = pm > 0 ? '#ffb86b' : pm < 0 ? '#79c0ff' : '#fff'; ctx.font = 'bold 20px sans-serif';
+    ctx.fillText(pm > 0 ? `▲ ${pm}‰` : pm < 0 ? `▼ ${-pm}‰` : 'Level', ix + 130, y0 + 94);
+    ctx.fillStyle = '#fff';
     const nl = LIMITS.find((L) => L.at > g.pos);
     ctx.font = 'bold 16px sans-serif';
     ctx.fillText(nl ? `${nl.lim} km/h in ${Math.max(0, nl.at - g.pos).toFixed(0)} m` : '—', ix, y0 + 138);
@@ -852,7 +888,7 @@
   }
 
   // Exposed for automated testing: set paused = true, then drive the game with step(dt) and render().
-  const hook = { get state() { return g; }, scene, stats, act, step, render, paused: false, sound, STATIONS, LIMITS, accel, limitAt, catsBetween };
+  const hook = { get state() { return g; }, scene, stats, act, step, render, paused: false, sound, STATIONS, LIMITS, GRADES, accel, limitAt, gradeAt, catsBetween };
   window.__train = hook;
   requestAnimationFrame(frame);
 })();

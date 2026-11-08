@@ -7,7 +7,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 - **Play (desktop or phone):** https://hitoshi85.github.io/train-simulator/ (add `?v=<short commit>`
   on a phone to skip a cached copy)
 - **Backlog:** [open issues](https://github.com/Hitoshi85/train-simulator/issues)
-- **Last updated:** 2026-11-07
+- **Last updated:** 2026-11-08
 
 ## 1. Core requirements
 
@@ -28,6 +28,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | R11 | Live camera insets in the top-right of the view, always on: FRONT CAM (outside camera ahead of the train looking back at its nose and side) and REAR CAM (from the tail looking back down the track). Rendered by the game, not real video. | Done (this PR) |
 | R12 | Platform camera inset that appears in sync as the train approaches each station (last 500 m), showing the train pulling in. | Done (this PR) |
 | R13 | Original synthesized sound with Web Audio, no audio files or copyrighted tunes: motor hum following speed, rolling noise, rail-joint clacks, brake hiss, lever clicks, overspeed beep, departure door chime, arrival melody, end jingle, and an original looping background tune. Mute with the M key or a "Sound" button, remembered in localStorage; audio starts only after the first key/tap. Closes #8. | Done (this PR) |
+| R14 | Uphill and downhill sections up to ±25‰ (moderate) change acceleration by about g × ‰ / 1000: coasting slows uphill and speeds up downhill. Gradient posts (number and up/down arm, "L" for level) stand beside the track at each change, and the dashboard shows the current gradient. Stations stay on level track. Closes #9. | Done (gradients PR) |
 
 ### How we work
 
@@ -55,6 +56,8 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | 2026-11-07 | This requirements and feedback log | [#14](https://github.com/Hitoshi85/train-simulator/pull/14) |
 | 2026-11-07 | 4 new stations (9 stations, about 1 km apart); live front, rear and platform camera insets; original synthesized sound, chimes and background music with mute (M / Sound button). Closes #8 | (this PR) |
 
+| 2026-11-08 | Uphill and downhill gradients (up to ±25‰) that change acceleration, gradient posts beside the track and a GRADIENT readout on the dashboard; stations are level. Closes #9 | (gradients PR) |
+
 ## 3. Feedback log
 
 Newest at the bottom. "Outcome" says what was done about it.
@@ -78,6 +81,8 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-07 | New standing rule: always ask clarifying questions one by one, each with 3 options and a recommendation. | Implemented in this PR (W2, CLAUDE.md). |
 | 2026-11-07 | New standing rule: always use multiple subagents that work in parallel, but balance token usage. | Implemented in this PR (W9, CLAUDE.md). |
 
+| 2026-11-08 | Backlog review: approved #9 (gradients) as written. | Implemented in the gradients PR (R14); default steepness "moderate, up to ±25‰" pending Hitoshi's answer to the clarifying question. |
+
 ## 4. Open backlog
 
 Add the `ready` label to an issue to start it.
@@ -87,7 +92,6 @@ Add the `ready` label to an issue to start it.
 | [#5](https://github.com/Hitoshi85/train-simulator/issues/5) | Rebalance the cat bonus so driving skill decides the score (cats are ~40% of a stop's score today) |
 | [#6](https://github.com/Hitoshi85/train-simulator/issues/6) | Save the best score and rank in the browser |
 | [#7](https://github.com/Hitoshi85/train-simulator/issues/7) | Add pause with P / Esc and a pause button |
-| [#9](https://github.com/Hitoshi85/train-simulator/issues/9) | Add gradients that affect acceleration, with gradient posts |
 | [#10](https://github.com/Hitoshi85/train-simulator/issues/10) | Make the game comfortable to play on a phone |
 | [#11](https://github.com/Hitoshi85/train-simulator/issues/11) | Add an Express mode that skips a station |
 | [#12](https://github.com/Hitoshi85/train-simulator/issues/12) | Add an evening run with lighting and rain |
