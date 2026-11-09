@@ -167,6 +167,7 @@ Add the `ready` label to an issue to start it.
 | Issue | Task | Status |
 |---|---|---|
 | (none open) | | |
+| (parked, no issue) | Agentic AI review, 2026-11-08: [docs/agentic-review-2026-11-08.md](docs/agentic-review-2026-11-08.md). Stored for later; do not file its tasks or act on its recommendations until Hitoshi says so. | Parked |
 
 Removed by the owner on 2026-11-08 (closed as not planned): [#5](https://github.com/Hitoshi85/train-simulator/issues/5) cat bonus rebalance, [#6](https://github.com/Hitoshi85/train-simulator/issues/6) save best score.
 
