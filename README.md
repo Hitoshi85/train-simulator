@@ -4,7 +4,7 @@
 
 <!-- play-links:start -->
 - **Prod** (prod-2, d2c93ab): https://hitoshi85.github.io/train-simulator/
-- **Dev** (1628c41): https://hitoshi85.github.io/train-simulator/dev/
+- **Dev** (1f81731): https://hitoshi85.github.io/train-simulator/dev/
 <!-- play-links:end -->
 
 Prod is the stable version and changes only on "Ship". Dev has every merged change and shows a
