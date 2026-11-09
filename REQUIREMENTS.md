@@ -41,6 +41,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | R23 | Weather that changes during the run (Hitoshi's choice): each run picks rain or snow at random, which rolls in partway (after about 3.2 to 5 km) and may clear before the end. Rain: grey overcast sky, rain streaks, drops on the cab glass. Snow: falling flakes and snow settling on the ground, hills and roofs. A notice says when it starts and clears, and the label shows "rain" or "snow". All camera insets show it too. Stays within the 16 ms phone frame budget, also checked at night in rain and snow near a station. Closes #12. | Done (#25) |
 | R24 | Players can send feedback from the game: a 💬 Feedback button (and the F key) pauses the run and opens a prefilled GitHub issue from the repo's feedback form, labelled `feedback`, so it lands in the backlog and GitHub notifies Hitoshi as the repo owner. The game fills in its context (version, Local/Express, where on the line, speed, time of day, weather, screen and browser). Players need a GitHub account (Hitoshi's choice); no token is shipped in the game. | Done (this PR) |
 | R25 | Progress is saved on the device (browser localStorage, no account): best score and rank per mode, settings (mode, sound), and a run in progress at the last station reached. On reopening, the title offers "Continue from the station" (Enter / tap) or "New run" (N). One versioned record (`aozora.save`, v1) so it can later move to cloud accounts. The dev site keeps a separate save (`aozora.save.dev`) so testing never touches prod saves. | Done (#28, dev split in #33) |
+| R26 | Power and brake sounds like a modern commuter EMU, soft and never harsh: a smooth inverter whine that rises in pitch with speed under power, falls under regenerative braking and fades out below about 7 km/h, silent when coasting; a gentle "pshh" when the brake goes on harder and a sigh on release; a faint air hiss only on B3 and EB. | Done (#38) |
 
 ### How we work
 
@@ -94,6 +95,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | 2026-11-08 | In-project PR review: a Claude thread reviews each PR's diff and posts a verdict; the merge queue waits for a PASS. The API-key review workflow is removed. Process: [docs/REVIEW.md](docs/REVIEW.md) | [#27](https://github.com/Hitoshi85/train-simulator/pull/27) |
 | 2026-11-08 | Progress saved on the device: best score and rank per mode, mode and sound settings, and resume a run from the last station (Continue or New run on the title). Versioned save format for later cloud accounts. Preview: [docs/screens/save-progress.png](docs/screens/save-progress.png) | [#28](https://github.com/Hitoshi85/train-simulator/pull/28) |
 | 2026-11-08 | The dev site keeps its own save, apart from prod (both share one web origin) | This PR |
+| 2026-11-09 | Softer, more realistic power and brake sounds: modern inverter whine following speed, gentle air brakes (R26) | [#38](https://github.com/Hitoshi85/train-simulator/pull/38) |
 
 ## 3. Feedback log
 
@@ -154,6 +156,7 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-08 | "Update dev/prod links in README.md." | The deploy had already updated them (prod 3a22128, dev ffc1cab); moved them to the top of the README as a "Play now" table with the plain links to bookmark plus the current versions. |
 | 2026-11-08 | "Links don't match up" (README on a phone showed a table of plain links and a second list of ?v= links; the table was cut off). | One short list, each site once: "Prod (prod-1, sha): link" and "Dev (sha): link"; the deploy only updates the version labels. |
 | 2026-11-09 | New list: fast rollback of versions/releases; more realistic, less obnoxious acceleration/deceleration sounds; label screenshots with the PR; label threads with the PR. | Fast rollback built in this PR (W18); sounds and labels handled in other threads. |
+| 2026-11-09 | "More realistic and less obnoxious acceleration/deceleration sounds." | Asked two questions: motor sound, A modern inverter whine; braking, A gentle air (soft puff on harder braking, faint hiss only on heavy braking, falling regen whine). Implemented (R26). |
 
 ## 4. Open backlog
 

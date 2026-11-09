@@ -463,3 +463,24 @@ test('living world: trees, birds and evening fireflies are drawn', async ({ page
   expect(r.birds).toBeGreaterThan(0);
   expect(r.fireflies).toBeGreaterThan(0);
 });
+
+test('power and brake sounds: soft inverter whine follows speed, air hiss only on heavy braking', async ({ page }) => {
+  const m = await page.evaluate(() => {
+    const s = window.__train.sound, kmh = (k) => k / 3.6;
+    return {
+      p1slow: s.mix(kmh(10), 1, 'running'), p3slow: s.mix(kmh(10), 3, 'running'), p3fast: s.mix(kmh(80), 3, 'running'),
+      coast: s.mix(kmh(60), 0, 'running'), b2fast: s.mix(kmh(60), -2, 'running'), b2crawl: s.mix(kmh(3), -2, 'running'),
+      b3: s.mix(kmh(40), -3, 'running'), eb: s.mix(kmh(40), -4, 'running'), stopped: s.mix(0, -3, 'arrived'),
+    };
+  });
+  expect(m.p3fast.whineHz).toBeGreaterThan(m.p3slow.whineHz);  // pitch rises with speed
+  expect(m.p3slow.whine).toBeGreaterThan(m.p1slow.whine);      // more power, a little louder
+  expect(m.p3fast.whine).toBeLessThan(0.05);                   // but always soft
+  expect(m.coast.whine).toBe(0);                               // silent when coasting
+  expect(m.b2fast.whine).toBeGreaterThan(0);                   // regenerative braking whines...
+  expect(m.b2crawl.whine).toBe(0);                             // ...and fades out near a stop
+  expect(m.b2fast.hiss).toBe(0);                               // no hiss on light braking
+  expect(m.b3.hiss).toBeGreaterThan(0);
+  expect(m.eb.hiss).toBeGreaterThan(m.b3.hiss);
+  expect(m.stopped.whine + m.stopped.hiss).toBe(0);
+});
