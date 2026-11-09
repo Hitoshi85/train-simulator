@@ -147,6 +147,8 @@ jobs:
   # Confirms each live site really serves its commit and the game starts.
   verify-live:
     needs: deploy
+    # Ship and rollback skip the test job; without this the skip would carry over and skip the live check.
+    if: ${{ !cancelled() && needs.deploy.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -182,6 +184,7 @@ jobs:
   # Keeps the play links in README.md current and posts them on the merged PR.
   links:
     needs: [deploy, verify-live]
+    if: ${{ !cancelled() && needs.deploy.result == 'success' && needs.verify-live.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

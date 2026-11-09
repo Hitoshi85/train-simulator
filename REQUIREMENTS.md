@@ -70,6 +70,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 
 | Date | Change | PR |
 |---|---|---|
+| 2026-11-09 | Fix: Ship and Rollback now run the live check and README update (they were skipped because the test job is skipped for those actions) | this PR |
 | 2026-11-09 | "Rollback" and "Rollback to prod-N" commands documented; the post-deploy check now also confirms prod's release name | this PR |
 | 2026-11-08 | README "Play now" shows each site once (prod and dev plain links with version labels), no table; the deploy only updates the labels | this PR |
 | 2026-11-08 | README opens with a "Play now" table: the prod and dev links to bookmark, then the current version of each (kept current by the deploy) | this PR |
@@ -157,6 +158,7 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-08 | "Links don't match up" (README on a phone showed a table of plain links and a second list of ?v= links; the table was cut off). | One short list, each site once: "Prod (prod-1, sha): link" and "Dev (sha): link"; the deploy only updates the version labels. |
 | 2026-11-09 | New list: fast rollback of versions/releases; more realistic, less obnoxious acceleration/deceleration sounds; label screenshots with the PR; label threads with the PR. | Fast rollback built in this PR (W18); sounds and labels handled in other threads. |
 | 2026-11-09 | "More realistic and less obnoxious acceleration/deceleration sounds." | Asked two questions: motor sound, A modern inverter whine; braking, A gentle air (soft puff on harder braking, faint hiss only on heavy braking, falling regen whine). Implemented (R26). |
+| 2026-11-09 | "Ship" | Promoted dev d2c93ab to prod as release prod-2. The Ship run skipped its live check (workflow bug, fixed in this PR); a follow-up deploy run verified prod-2 live and updated the README. |
 
 ## 4. Open backlog
 
