@@ -31,8 +31,11 @@
    - **Ship:** when the owner types "Ship", Claude runs the workflow with action `ship` (Actions →
      Deploy to GitHub Pages → Run workflow). It tags the commit dev serves as the next `prod-N`,
      publishes a GitHub release with notes since the last one, and moves the `prod` tag.
-   - **Rollback:** run it with action `rollback` (optionally naming a `prod-N` tag; empty means the
-     release before the current one). Dev is not touched by Ship or rollback.
+   - **Rollback:** when the owner types "Rollback", Claude runs the workflow with action `rollback` and
+     an empty tag, which puts prod back on the release before the current one; "Rollback to prod-N"
+     names the release instead. It skips the test run, so prod switches in about a minute. verify-live
+     then checks prod serves that release's commit and reports its `prod-N` in `version.json`, and the
+     README label follows. Dev is not touched by Ship or rollback.
 6. **Feedback.** Playtest notes go in a `feedback` issue (or a chat message); Claude turns them into
    new `task` issues.
 

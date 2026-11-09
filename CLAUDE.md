@@ -31,7 +31,10 @@ GitHub Pages deploys `index.html`, `game.js`, `style.css` (and `assets/` if pres
    cache-busting suffix of the deployed commit's short SHA: `.../train-simulator/dev/?v=<short-sha>`.
    When the owner says "Ship", run `pages.yml` with action `ship` (promotes what dev serves to prod at
    `https://hitoshi85.github.io/train-simulator/` as release `prod-N`) and share the prod link the same way;
-   action `rollback` goes back to an earlier `prod-N`. README.md always lists the current links.
+   When the owner says "Rollback", run `pages.yml` with action `rollback` and an empty tag (prod goes back
+   to the release before the current one); "Rollback to prod-N" passes that tag. Rollback skips the tests,
+   so prod switches in about a minute; verify-live then confirms prod reports that commit and release, and
+   the README label follows. Share the prod link afterwards. README.md always lists the current links.
 11. The owner talks only in the project chat; send questions, ready PRs and manual steps through
    the coordinator, not in your own thread.
 

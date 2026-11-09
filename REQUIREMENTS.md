@@ -62,12 +62,14 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | W14 | Merge queue: one PR at a time, oldest first; the queue rebases it onto `main`, re-runs CI, merges when green, deploys, then moves to the next. A PR it cannot rebase gets a `queue-conflict` label and a comment. | Done (#22) |
 | W16 | Separate dev and prod web links: prod stays at `https://hitoshi85.github.io/train-simulator/` (Hitoshi's choice), dev is at `/dev/` and clearly marked: a small "DEV <commit>" tag at the top of the screen and "DEV" in the page title (prod is unmarked). When Hitoshi types "Ship" in the project chat, the version dev serves is promoted to prod as a tagged GitHub release (`prod-1`, `prod-2`, …); a rollback re-points prod at an earlier release. The live check verifies both sites. README.md always shows the latest prod and dev links with a `?v=<short-sha>` suffix, updated by the deploy workflow. | Done (this PR) |
 | W17 | Both dev and prod are phone friendly and always play the latest version without a hard refresh, even from a plain bookmark with no `?v=`: the deploy loads `game.js` and `style.css` as `?v=<commit>`, marks `index.html` no-cache, and a tiny check reads `version.json` (never cached) when the page opens or is restored, reloading once onto a newer deploy. The phone layout tests run against the repo copy and both built sites, and the post-deploy check also runs a phone-size check on each live site. | Done (this PR) |
+| W18 | Fast rollback: typing "Rollback" in the project chat puts prod back on the previous `prod-N` release in about a minute (no test run, since releases were already tested); "Rollback to prod-N" picks a specific release. The live check confirms prod serves that release's commit and reports its name, and the README label shows the current release. Dev is untouched. | Done (this PR) |
 | W15 | Hitoshi talks only in the project chat with one orchestrator; threads send questions, ready PRs and manual steps through it instead of asking in their own thread. | In place |
 
 ## 2. Shipped changes
 
 | Date | Change | PR |
 |---|---|---|
+| 2026-11-09 | "Rollback" and "Rollback to prod-N" commands documented; the post-deploy check now also confirms prod's release name | this PR |
 | 2026-11-08 | README "Play now" shows each site once (prod and dev plain links with version labels), no table; the deploy only updates the labels | this PR |
 | 2026-11-08 | README opens with a "Play now" table: the prod and dev links to bookmark, then the current version of each (kept current by the deploy) | this PR |
 | 2026-11-08 | Fix the post-deploy phone check: it expected exactly 7 touch buttons, but the Feedback button made 8, so the first dev/prod deploy was marked failed although both sites were live | this PR |
@@ -151,6 +153,7 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-08 | "Make dev link clear that it is dev." (changes the earlier no-marker choice) | Dev now shows a small "DEV <commit>" tag at the top centre, ignoring taps, and "DEV" in the page title; prod is unchanged (W16). |
 | 2026-11-08 | "Update dev/prod links in README.md." | The deploy had already updated them (prod 3a22128, dev ffc1cab); moved them to the top of the README as a "Play now" table with the plain links to bookmark plus the current versions. |
 | 2026-11-08 | "Links don't match up" (README on a phone showed a table of plain links and a second list of ?v= links; the table was cut off). | One short list, each site once: "Prod (prod-1, sha): link" and "Dev (sha): link"; the deploy only updates the version labels. |
+| 2026-11-09 | New list: fast rollback of versions/releases; more realistic, less obnoxious acceleration/deceleration sounds; label screenshots with the PR; label threads with the PR. | Fast rollback built in this PR (W18); sounds and labels handled in other threads. |
 
 ## 4. Open backlog
 

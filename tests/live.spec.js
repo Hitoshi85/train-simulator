@@ -5,6 +5,8 @@ const { test, expect, devices } = require('@playwright/test');
 const LIVE_URL = process.env.LIVE_URL;
 // EXPECT_SHA is the commit this site should serve (prod and dev can differ); defaults to GITHUB_SHA.
 const SHA = process.env.EXPECT_SHA || process.env.GITHUB_SHA;
+// EXPECT_TAG (prod only) is the release prod should report, e.g. prod-2 after a Ship or Rollback.
+const TAG = process.env.EXPECT_TAG;
 
 test.describe('live site', () => {
   test.skip(!LIVE_URL, 'LIVE_URL not set; only runs after a deploy');
@@ -16,7 +18,9 @@ test.describe('live site', () => {
     if (SHA) {
       const res = await page.request.get(`${LIVE_URL}version.json${bust}`);
       expect(res.ok()).toBe(true);
-      expect((await res.json()).sha).toBe(SHA);
+      const version = await res.json();
+      expect(version.sha).toBe(SHA);
+      if (TAG) expect(version.tag).toBe(TAG);
     }
     await page.goto(`${LIVE_URL}${bust}`);
     await page.waitForFunction(() => window.__train && window.__train.stats.frames > 2, null, { timeout: 15000 });
