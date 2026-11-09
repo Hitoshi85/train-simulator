@@ -17,7 +17,8 @@ A tiny, original train-driving game for the browser. Plain HTML/CSS/JS, no build
 Open `index.html` in any modern browser, or play the web builds linked at the top of this page.
 
 Every merge to `main` goes to **dev** only. Typing "Ship" in the project chat promotes the version dev
-serves to **prod** as a tagged GitHub release (`prod-1`, `prod-2`, …), so a rollback is one click.
+serves to **prod** as a tagged GitHub release (`prod-1`, `prod-2`, …), and typing "Rollback" (or
+"Rollback to prod-2") puts prod back on an earlier release in about a minute.
 Both are run by `.github/workflows/pages.yml`; see [docs/WORKFLOW.md](docs/WORKFLOW.md).
 
 ## How to drive

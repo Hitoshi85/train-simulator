@@ -156,6 +156,8 @@ jobs:
     env:
       LIVE_URL: ${{ needs.deploy.outputs.page_url }}${{ matrix.site == 'dev' && 'dev/' || '' }}
       EXPECT_SHA: ${{ matrix.site == 'dev' && needs.deploy.outputs.dev_sha || needs.deploy.outputs.prod_sha }}
+      # Prod must also report its release (prod-N), so a Ship or Rollback is confirmed by name.
+      EXPECT_TAG: ${{ matrix.site == 'prod' && needs.deploy.outputs.prod_tag || '' }}
     steps:
       - uses: actions/checkout@v4
       - name: Wait until the live ${{ matrix.site }} site serves its commit
