@@ -259,6 +259,20 @@
     }
   }
 
+  // Power and brake sound levels, like a modern commuter EMU: the inverter whine rises in pitch with
+  // speed under power, falls with it under regenerative braking (which fades out below ~7 km/h, where
+  // the air brake takes over) and is silent when coasting. Air hiss only under heavy braking.
+  function soundMix(v, lever, state) {
+    const kmh = v * 3.6, running = state === 'running';
+    const whineHz = 140 + kmh * 9;
+    const soft = Math.min(1, kmh / 4); // fade in from standstill so pull-away never clicks on
+    let whine = 0;
+    if (running && lever > 0) whine = (0.018 + 0.006 * lever) * Math.max(0.35, soft);
+    else if (running && lever < 0 && lever > EB) whine = (0.01 + 0.004 * -lever) * Math.min(1, Math.max(0, (kmh - 5) / 6));
+    const hiss = running && v > 0.3 && (lever <= -B_MAX) ? 0.004 + (lever === EB ? 0.003 : 0) : 0;
+    return { whineHz, whine, hiss };
+  }
+
   // ---------- Sound (all generated with Web Audio: no audio files, original tunes) ----------
   const sound = (() => {
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -281,6 +295,14 @@
       e.gain.setValueAtTime(vol, t); e.gain.exponentialRampToValueAtTime(0.0001, t + dur);
       src.connect(f).connect(e).connect(sfx); src.start(t, Math.random()); src.stop(t + dur + 0.05);
     }
+    // soft air: noise that swells in and fades, filtered low so it never sounds harsh
+    function puff(t, dur, vol) {
+      const src = ac.createBufferSource(), f = ac.createBiquadFilter(), e = ac.createGain();
+      src.buffer = noise; f.type = 'lowpass'; f.frequency.value = 2200;
+      e.gain.setValueAtTime(0.0001, t); e.gain.exponentialRampToValueAtTime(vol, t + 0.06);
+      e.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(f).connect(e).connect(sfx); src.start(t, Math.random()); src.stop(t + dur + 0.05);
+    }
     function loopNoise(type, freq, dest) {
       const src = ac.createBufferSource(), f = ac.createBiquadFilter(), e = ac.createGain();
       src.buffer = noise; src.loop = true; f.type = type; f.frequency.value = freq; e.gain.value = 0;
@@ -297,15 +319,17 @@
         music = ac.createGain(); music.gain.value = 0.22; music.connect(master);
         noise = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
         const ch = noise.getChannelData(0); for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
-        // motor: a soft buzzy hum whose pitch follows speed
+        // inverter whine: a smooth tone plus a soft octave below, pitch follows speed (see mix())
         motor = [ac.createOscillator(), ac.createOscillator()];
-        motorFilter = ac.createBiquadFilter(); motorFilter.type = 'lowpass'; motorFilter.frequency.value = 700;
+        motorFilter = ac.createBiquadFilter(); motorFilter.type = 'lowpass'; motorFilter.frequency.value = 1800; motorFilter.Q.value = 0.5;
         motorGain = ac.createGain(); motorGain.gain.value = 0;
-        motor[0].type = 'sawtooth'; motor[1].type = 'triangle';
-        motor.forEach((o) => { o.frequency.value = 60; o.connect(motorFilter); o.start(); });
+        motor[0].type = 'sine'; motor[1].type = 'triangle';
+        const sub = ac.createGain(); sub.gain.value = 0.35;
+        motor[0].frequency.value = 120; motor[0].connect(motorFilter); motor[0].start();
+        motor[1].frequency.value = 60; motor[1].connect(sub).connect(motorFilter); motor[1].start();
         motorFilter.connect(motorGain).connect(sfx);
         roll = loopNoise('lowpass', 350, sfx);
-        hiss = loopNoise('highpass', 3500, sfx);
+        hiss = loopNoise('bandpass', 2600, sfx);
         nextNote = ac.currentTime + 0.1;
       } catch { ac = null; }
     }
@@ -337,12 +361,12 @@
       const t = ac.currentTime, kmh = g.v * 3.6, running = g.state === 'running';
       scheduleMusic();
       // continuous sounds
-      const powered = running && g.lever > 0;
-      motor[0].frequency.setTargetAtTime(45 + kmh * 7, t, 0.1);
-      motor[1].frequency.setTargetAtTime(90 + kmh * 14, t, 0.1);
-      motorGain.gain.setTargetAtTime(powered ? 0.05 + 0.02 * g.lever : (g.v > 0.5 ? 0.012 : 0), t, 0.15);
-      roll.gain.setTargetAtTime(Math.min(1, g.v / 25) * 0.25, t, 0.2);
-      hiss.gain.setTargetAtTime(g.lever < 0 && g.v > 0.3 ? 0.012 + 0.006 * -g.lever : 0, t, 0.1);
+      const m = soundMix(g.v, g.lever, g.state);
+      motor[0].frequency.setTargetAtTime(m.whineHz, t, 0.12);
+      motor[1].frequency.setTargetAtTime(m.whineHz / 2, t, 0.12);
+      motorGain.gain.setTargetAtTime(m.whine, t, 0.35);
+      roll.gain.setTargetAtTime(Math.min(1, g.v / 25) * 0.22, t, 0.2);
+      hiss.gain.setTargetAtTime(m.hiss, t, 0.25);
       // rail joints every 25 m: a clack for each pair of wheels
       const j = Math.floor(g.pos / 25);
       if (j !== joint && g.v > 1) {
@@ -350,10 +374,11 @@
         burst(t, 0.06, 1100, 0.5, 2); burst(t + gap, 0.06, 1000, 0.45, 2);
       }
       joint = j;
-      // lever clicks and a puff of air when braking harder
+      // a soft lever click, a gentle "pshh" when the brake goes on harder and a sigh when it is released
       if (g.lever !== prevLever) {
-        tone(1800, t, 0.03, 'square', 0.05);
-        if (g.lever < prevLever && g.lever < 0) burst(t, 0.25, 4000, 0.15, 0.7);
+        tone(1200, t, 0.025, 'triangle', 0.02);
+        if (g.lever < prevLever && g.lever < 0 && running) puff(t, 0.35, 0.035);
+        if (prevLever < 0 && g.lever >= 0 && running) puff(t, 0.5, 0.025);
       }
       prevLever = g.lever;
       // overspeed warning beep
@@ -379,7 +404,7 @@
       if (b) b.textContent = muted ? '🔇 Sound off' : '🔊 Sound on';
     }
     syncButton();
-    return { start, update, toggle, get muted() { return muted; }, get started() { return !!ac; } };
+    return { start, update, toggle, mix: soundMix, get muted() { return muted; }, get started() { return !!ac; } };
   })();
 
   // ---------- Input ----------
