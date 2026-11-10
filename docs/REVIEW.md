@@ -29,6 +29,22 @@ every PR, and the merge queue waits for its verdict. Hitoshi never has to review
 - On `BLOCK`, the reviewer also tells the coordinator, so the PR's own thread fixes it and asks for
   a new review. Nits never block.
 
+## AI playtest for PRs that touch `game.js` or `style.css`
+
+The reviewer judges how the change looks and plays, not only whether the code works. From the PR's
+latest **CI** run (`actions_list` → the run's artifacts, then download):
+
+- **Screenshots:** open `phone-screenshots` (this PR) and `phone-screenshots-main` (the same shots
+  taken on `main`) side by side: portrait and landscape, title and mid-run. Look for broken visuals:
+  blank or black areas, overlapping or cut-off text and buttons, missing train, track or HUD.
+  Intended changes that the PR describes are fine.
+- **Balance:** read the "AI playtest: balance per station" table in the run's job summary (also the
+  `balance` artifact, `balance.json`). Three imperfect drivers (late, early, noisy) play Local and
+  Express; each cell shows points, stop error and time margin. Mention big swings in a line.
+- **Block only** for broken visuals or a station made impossible (marked ⚠️, every driver overran it
+  or scored nothing; the balance test also fails CI then). Everything else is a note, not a block.
+- One reviewer only: no second fresh-session review.
+
 ## How the merge queue uses it
 
 `.github/scripts/merge-queue.js` (`reviewState`) reads the PR's comments. The newest verdict for the
