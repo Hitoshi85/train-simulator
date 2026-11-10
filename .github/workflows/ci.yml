@@ -25,7 +25,7 @@ jobs:
       - run: npm run lint
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-      - name: Smoke, phone screenshot and frame-budget tests
+      - name: Smoke, phone screenshot, frame-budget and AI playtest tests
         run: npm test
       - name: Upload phone screenshots
         if: always()
@@ -33,6 +33,30 @@ jobs:
         with:
           name: phone-screenshots
           path: phone-screenshots/
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Upload AI playtest balance table
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: balance
+          path: balance-report/
+          if-no-files-found: ignore
+          retention-days: 14
+      # The same phone screenshots taken on main, so the reviewer can compare before and after.
+      - name: Phone screenshots of main, for comparison
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        run: |
+          git fetch --depth=1 origin "${{ github.base_ref }}"
+          git worktree add main-src FETCH_HEAD
+          cd main-src && npm ci && npx playwright test tests/phone-checks.spec.js --grep screenshots
+      - name: Upload main's phone screenshots
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phone-screenshots-main
+          path: main-src/phone-screenshots/
           if-no-files-found: ignore
           retention-days: 14
       - name: Upload report on failure

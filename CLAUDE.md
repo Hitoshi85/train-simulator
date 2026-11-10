@@ -50,6 +50,9 @@ Keep it working when refactoring; add to it when a new feature needs checking.
 `tests/smoke.spec.js` has an `autopilot()` that drives the full line through `act()`.
 `tests/phone-checks.spec.js` saves phone screenshots to `phone-screenshots/` (a CI artifact) and enforces a
 16 ms median frame-draw budget at phone size.
+`tests/balance.spec.js` is the AI playtest: three imperfect drivers (late, early, noisy) play Local and Express and
+write a per-station balance table to the CI summary and `balance-report/` (artifact `balance`); it fails only if a
+station becomes impossible. On PRs, CI also uploads main's phone screenshots (`phone-screenshots-main`).
 
 ## Project review
 
