@@ -48,7 +48,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | # | Requirement | Status |
 |---|---|---|
 | W1 | All work runs in cloud sessions, not tied to the owner's computer. | In place |
-| W2 | Before changing the game, ask clarifying questions **one at a time**, each with 3 options and a recommended one. | In place |
+| W2 | Before changing the game, ask **all of a feature's clarifying questions together in one message**, each with exactly 3 options, the recommended one first. Claude still asks about every change (no deciding small choices alone). Replaces "one at a time" (Hitoshi's choice, 2026-11-10). | Done (#43) |
 | W3 | Agentic loop: tasks are GitHub issues labelled `task`; the owner approves with `ready`; one thread per issue opens a small PR; CI (ESLint + headless autopilot smoke test) must be green. See [docs/WORKFLOW.md](docs/WORKFLOW.md). | In place |
 | W4 | PRs merge on their own through the merge queue when every check is green on top of `main` and the description has a screenshot, for small PRs only: 800 changed lines or fewer, lock files and images not counted (Hitoshi's choice). Bigger PRs wait for "m" unless labelled `automerge`. A `hold` label keeps a PR out; PRs that change `.github/workflows/` still wait for the owner's "m". Replaces "the owner merges". | Done (#22) |
 | W5 | Merges to `main` deploy to GitHub Pages through the tested workflow, to **dev** only (`/train-simulator/dev/`). | In place (dev/prod split in this PR) |
@@ -97,6 +97,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | 2026-11-08 | Progress saved on the device: best score and rank per mode, mode and sound settings, and resume a run from the last station (Continue or New run on the title). Versioned save format for later cloud accounts. Preview: [docs/screens/save-progress.png](docs/screens/save-progress.png) | [#28](https://github.com/Hitoshi85/train-simulator/pull/28) |
 | 2026-11-08 | The dev site keeps its own save, apart from prod (both share one web origin) | This PR |
 | 2026-11-09 | Softer, more realistic power and brake sounds: modern inverter whine following speed, gentle air brakes (R26) | [#38](https://github.com/Hitoshi85/train-simulator/pull/38) |
+| 2026-11-10 | Clarifying questions are batched: all of a feature's questions go out together in one message, each with 3 options and the recommendation first (W2, CLAUDE.md step 2). Closes #43 | This PR |
 
 ## 3. Feedback log
 
@@ -160,6 +161,7 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-09 | "More realistic and less obnoxious acceleration/deceleration sounds." | Asked two questions: motor sound, A modern inverter whine; braking, A gentle air (soft puff on harder braking, faint hiss only on heavy braking, falling regen whine). Implemented (R26). |
 | 2026-11-09 | "Ship" | Promoted dev d2c93ab to prod as release prod-2. The Ship run skipped its live check (workflow bug, fixed in this PR); a follow-up deploy run verified prod-2 live and updated the README. |
 | 2026-11-10 | Review the tasks in the agentic AI review doc and decide them one by one. | Decided A to H one at a time; all eight filed as `task` issues, none built yet. A: scheduled reviewer only, run daily, not hourly (#41). B: veto window with no triage run, 36 hours instead of 24 (#42). C: batch all of a task's questions in one message, no "decide and show" (#43). D: screenshot comparison and balance test, one reviewer, no second fresh-session review (#44). E: split game.js as written, after A to D land (#45). F: as written (#46). G: as written (#47). H: weekly report folded into the daily reviewer run, on Fridays (#48). |
+| 2026-11-10 | Agentic review item C (narrower clarifying-question rule): Hitoshi chose **batch only**, Claude still asks about every change but sends all of a feature's questions together. | Implemented in this PR (W2, CLAUDE.md); closes #43. |
 
 ## 4. Open backlog
 
