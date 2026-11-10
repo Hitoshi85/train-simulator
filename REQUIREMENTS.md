@@ -81,7 +81,6 @@ Newest at the bottom, latest 20 rows only: when a new row would make 21, move th
 
 | Date | Feedback / request from Hitoshi | Outcome |
 |---|---|---|
-| 2026-11-08 | New list: dev/prod environments with separate links; "Ship" promotes a version to prod; prod/dev links in the README; save progress on the device; players can submit feedback that goes to the backlog and notifies Hitoshi; a review agent inside the project. | Split across threads; player feedback built in #26 (R24); review agent built in #27 (W13). |
 | 2026-11-08 | Question: how should a player's feedback reach the backlog? (options: prefilled GitHub issue link, form service copied into issues daily, serverless relay holding a token) | Hitoshi chose the prefilled GitHub issue (R24). |
 | 2026-11-08 | Question: what should the feedback issue include automatically? (options: game context, only the player's words, context plus a frame snapshot) | Hitoshi chose the game context (R24). |
 | 2026-11-08 | "Review agent but within the project and not a separate setup." | Replaces the API-key review workflow with a Claude reviewer thread in the project (W13). |
@@ -101,6 +100,7 @@ Newest at the bottom, latest 20 rows only: when a new row would make 21, move th
 | 2026-11-10 | Agentic review item C (narrower clarifying-question rule): Hitoshi chose **batch only**, Claude still asks about every change but sends all of a feature's questions together. | Implemented in #50 (W2, CLAUDE.md); closes #43. |
 | 2026-11-10 | Build agentic review item F (#46) as written: slim REQUIREMENTS.md and check it in CI; "proceed with all in the order that makes sense". | Built in #53: Shipped changes now points to merged PRs and releases, feedback rows older than the latest 20 and the old shipped table moved to docs/feedback-archive.md, every placeholder replaced with its number, and a lint test in CI (W7). Instead of the queue filling in PR numbers on merge, threads write the number once the PR is open and CI rejects the placeholder on every branch, because hand-merged workflow PRs skip the queue (found in project review). |
 | 2026-11-10 | "Yes, why are you waiting on me? Proceed with all in the order that makes sense" | Started the approved tasks without further questions; D (#44) built in [#51](https://github.com/Hitoshi85/train-simulator/pull/51). |
+| 2026-11-10 | "M to all" (merge every ready PR). | Merged in order #53, #51, #52, #54; #52 tests the deploy, Ship and Rollback logic in CI (#47). |
 
 ## 4. Open backlog
 
@@ -114,7 +114,7 @@ Add the `ready` label to an issue to start it.
 | [#44](https://github.com/Hitoshi85/train-simulator/issues/44) | D. AI playtest on feature PRs (screenshots and balance) | In review ([#51](https://github.com/Hitoshi85/train-simulator/pull/51)) |
 | [#45](https://github.com/Hitoshi85/train-simulator/issues/45) | E. Split game.js into native ES modules, after A to D | Approved, not started |
 | [#46](https://github.com/Hitoshi85/train-simulator/issues/46) | F. Slim REQUIREMENTS.md and check it in CI | In PR [#53](https://github.com/Hitoshi85/train-simulator/pull/53) |
-| [#47](https://github.com/Hitoshi85/train-simulator/issues/47) | G. Test the deploy workflow logic (needs "m") | Approved, not started |
+| [#47](https://github.com/Hitoshi85/train-simulator/issues/47) | G. Test the deploy workflow logic (needs "m") | In PR [#52](https://github.com/Hitoshi85/train-simulator/pull/52) |
 | [#48](https://github.com/Hitoshi85/train-simulator/issues/48) | H. Weekly report on Fridays, after #41 | Approved, not started |
 
 Removed by the owner on 2026-11-08 (closed as not planned): [#5](https://github.com/Hitoshi85/train-simulator/issues/5) cat bonus rebalance, [#6](https://github.com/Hitoshi85/train-simulator/issues/6) save best score.
