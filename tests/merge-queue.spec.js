@@ -75,12 +75,3 @@ test('docs-only PRs need no review', () => {
   expect(q.docsOnly([{ filename: 'REQUIREMENTS.md' }, { filename: 'game.js' }])).toBe(false);
   expect(q.docsOnly([])).toBe(false);
 });
-
-test('fills in the PR number for "this PR" in the requirements log', () => {
-  const repo = 'Hitoshi85/train-simulator';
-  expect(q.fillPrNumber('| W19 | New rule | Done (this PR) |', 52, repo))
-    .toBe('| W19 | New rule | Done ([#52](https://github.com/Hitoshi85/train-simulator/pull/52)) |');
-  expect(q.fillPrNumber('This PR and this pr', 7, repo)).toBe(
-    '[#7](https://github.com/Hitoshi85/train-simulator/pull/7) and [#7](https://github.com/Hitoshi85/train-simulator/pull/7)');
-  expect(q.fillPrNumber('Built in #51.', 52, repo)).toBe('Built in #51.');
-});

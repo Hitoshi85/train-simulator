@@ -31,17 +31,6 @@ const REVIEW_TRUSTED = ['OWNER', 'MEMBER', 'COLLABORATOR'];
 const REVIEW_BOTS = ['github-actions[bot]'];
 const NO_REVIEW_NEEDED = [/\.md$/i, /^docs\//, /\.(png|jpe?g|gif|webp)$/i];
 
-// REQUIREMENTS.md may say "this PR" while a PR is open (its number is not known yet when it is written);
-// after merging, the queue swaps each one for a link to the PR. tests/requirements.spec.js fails if any
-// is left on main.
-const LOG_FILE = 'REQUIREMENTS.md';
-const THIS_PR = /\bthis PR\b/gi;
-
-// Replaces every "this PR" in `text` with a link to PR `n`. Returns the text unchanged if there is none.
-function fillPrNumber(text, n, repoFullName) {
-  return text.replace(THIS_PR, `[#${n}](https://github.com/${repoFullName}/pull/${n})`);
-}
-
 const BAD = new Set(['failure', 'cancelled', 'timed_out', 'action_required', 'startup_failure', 'stale']);
 
 // True when the PR description shows at least one image (Markdown or HTML).
@@ -207,19 +196,6 @@ async function run({ github, context, core }) {
         `Deploying now; the play link follows once the live site serves this commit.`,
     });
     try {
-      const { data: file } = await github.rest.repos.getContent({ owner, repo, path: LOG_FILE, ref: 'main' });
-      const before = Buffer.from(file.content, 'base64').toString('utf8');
-      const after = fillPrNumber(before, n, full);
-      if (after !== before) {
-        await github.rest.repos.createOrUpdateFileContents({
-          owner, repo, path: LOG_FILE, branch: 'main', sha: file.sha,
-          message: `Fill in PR #${n} in ${LOG_FILE} [skip ci]`,
-          content: Buffer.from(after, 'utf8').toString('base64'),
-        });
-        say(`Filled in #${n} in ${LOG_FILE}.`);
-      }
-    } catch (e) { say(`${LOG_FILE} not updated: ${e.message}`); }
-    try {
       await github.rest.git.deleteRef({ owner, repo, ref: `heads/${pr.head.ref}` });
     } catch (e) { say(`Branch not deleted: ${e.message}`); }
     // A merge made with GITHUB_TOKEN does not fire "push", so start the deploy and the next queue run.
@@ -233,5 +209,4 @@ async function run({ github, context, core }) {
 
 module.exports = {
   run, hasScreenshot, changedLines, eligibility, MAX_CHANGED_LINES, checksState, REQUIRED_CHECK, reviewState, docsOnly,
-  fillPrNumber,
 };

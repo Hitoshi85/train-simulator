@@ -2,23 +2,11 @@
 const { test, expect } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
 const root = path.join(__dirname, '..');
 const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
 const log = read('REQUIREMENTS.md');
 const MAX_FEEDBACK_ROWS = 20;
-
-// True on main: CI pushes to main, or a local checkout of main. PR branches may still say "this PR";
-// the merge queue swaps it for the PR number when it merges.
-function onMain() {
-  if (process.env.GITHUB_REF) return process.env.GITHUB_REF === 'refs/heads/main';
-  try {
-    return execSync('git rev-parse --abbrev-ref HEAD', { cwd: root }).toString().trim() === 'main';
-  } catch {
-    return false;
-  }
-}
 
 // The table rows of one "## N. Title" section.
 function rows(title) {
@@ -27,11 +15,11 @@ function rows(title) {
   return m[1].split('\n').filter((l) => /^\| \d{4}-\d{2}-\d{2} \|/.test(l));
 }
 
-test('no "this PR" placeholders left on main', () => {
-  test.skip(!onMain(), 'only enforced on main; the merge queue fills in the number on merge');
+// Checked on every branch, so a placeholder can never reach main (PRs merged by hand included).
+test('no "this PR" placeholders', () => {
   for (const f of ['REQUIREMENTS.md', 'docs/feedback-archive.md']) {
     const left = read(f).split('\n').filter((l) => /\bthis PR\b/i.test(l));
-    expect(left, `${f} still says "this PR"; use the PR number`).toEqual([]);
+    expect(left, `${f} says "this PR"; write the PR number once the PR is open`).toEqual([]);
   }
 });
 

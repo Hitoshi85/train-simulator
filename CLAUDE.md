@@ -67,9 +67,8 @@ feedback (dated, with the outcome) in **Feedback log**, update requirement statu
 opens a small PR updating the log. Shipped changes are the merged PRs and `prod-N` releases (no table).
 Keep it small, `tests/requirements.spec.js` checks it in CI:
 - The feedback log keeps the latest 20 rows; move older rows to the bottom of `docs/feedback-archive.md`.
-- Write PR numbers, not "this PR". Once the PR is open, use its number; any "this PR" left is filled
-  in by the merge queue on merge, and the check fails if one reaches `main` (fill it in by hand before
-  an "m" merge).
+- Write PR numbers, never "this PR": open the PR, then push its number into the log (CI fails on the
+  placeholder on every branch).
 - R and W requirements stay numbered in order with no gaps; the play links match README.md.
 
 ## Commands
