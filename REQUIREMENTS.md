@@ -101,8 +101,8 @@ Newest at the bottom, latest 20 rows only: when a new row would make 21, move th
 | 2026-11-10 | Build agentic review item F (#46) as written: slim REQUIREMENTS.md and check it in CI; "proceed with all in the order that makes sense". | Built in #53: Shipped changes now points to merged PRs and releases, feedback rows older than the latest 20 and the old shipped table moved to docs/feedback-archive.md, every placeholder replaced with its number, and a lint test in CI (W7). Instead of the queue filling in PR numbers on merge, threads write the number once the PR is open and CI rejects the placeholder on every branch, because hand-merged workflow PRs skip the queue (found in project review). |
 | 2026-11-10 | "Yes, why are you waiting on me? Proceed with all in the order that makes sense" | Started the approved tasks without further questions; D (#44) built in [#51](https://github.com/Hitoshi85/train-simulator/pull/51). |
 | 2026-11-10 | "M to all" (merge every ready PR). | Merged in order #53, #51, #52, #54; #52 tests the deploy, Ship and Rollback logic in CI (#47). |
-| 2026-11-10 | "Run daily reviews at 7:00 EST." | The scheduled Claude review now runs at 7:00 New York time (it follows daylight saving), done in #N. |
-| 2026-11-10 | "Move backlog to 07:00 EST as well." | The daily backlog run moved to 12:30 UTC (7:30 EST, 8:30 EDT) so it still runs after the review has marked big tasks `needs-yes`; Fridays and report dates now use New York time (#N). |
+| 2026-11-10 | "Run daily reviews at 7:00 EST." | The scheduled Claude review now runs at 7:00 New York time (it follows daylight saving), done in #55. |
+| 2026-11-10 | "Move backlog to 07:00 EST as well." | The daily backlog run moved to 12:30 UTC (7:30 EST, 8:30 EDT) so it still runs after the review has marked big tasks `needs-yes`; Fridays and report dates now use New York time (#55). |
 
 ## 4. Open backlog
 
