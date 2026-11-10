@@ -1,8 +1,15 @@
 # How the agentic dev loop works
 
-1. **Backlog.** Work lives in GitHub Issues labelled `task`. Each has a goal and a
-   **Done when** checklist. The owner files issues (or asks Claude to draft them) and approves
-   them by adding the `ready` label.
+1. **Backlog with a veto window.** Work lives in GitHub Issues labelled `task`. Each has a goal and a
+   **Done when** checklist. The owner files issues and approves them with the `ready` label, or
+   Claude proposes them with the `proposed` label (from the chat or a thread; the coordinator lists
+   new ones once a day). A `proposed` task becomes `ready` on its own after **36 hours** unless the
+   owner vetoes it: a `hold` label, a comment starting with "no" or "drop", or "drop #N" in the
+   project chat (the coordinator then closes it as not planned). At most 3 tasks are promoted a day,
+   oldest first. Tasks that change controls, game modes, the real-world route or prod get
+   `needs-yes` and stay `proposed` until the owner says yes. The daily backlog run
+   (`.github/workflows/daily.yml`, 07:00 Japan time, rules in `.github/scripts/daily.js`, tested in
+   `tests/daily.spec.js`) does the promotion.
 2. **One thread per issue.** Claude picks up a `ready` issue, branches from `main`, implements it,
    runs `npm run check`, and opens a PR with `Closes #N`. Independent issues run in parallel.
 3. **CI gate.** `.github/workflows/ci.yml` runs on every PR: ESLint, then a headless Chromium
@@ -36,7 +43,15 @@
      names the release instead. It skips the test run, so prod switches in about a minute. verify-live
      then checks prod serves that release's commit and reports its `prod-N` in `version.json`, and the
      README label follows. Dev is not touched by Ship or rollback.
-6. **Feedback.** Playtest notes go in a `feedback` issue (or a chat message); Claude turns them into
+6. **Daily review and Friday report.** A scheduled Claude task reviews every unreviewed PR once a day
+   at 05:47 Japan time and marks big `proposed` tasks `needs-yes` (see docs/REVIEW.md). On Fridays the
+   daily backlog run also opens a `report` issue, "Weekly report, week to <date>": what shipped to dev,
+   what is proposed, what is blocked or waiting (`hold`, `needs-yes`, `queue-conflict`), the current
+   play links, and four numbers: Hitoshi's messages per shipped PR (rows in the REQUIREMENTS.md
+   feedback log), PRs merged by the queue with no "m", median lead time from `ready` to dev, and the
+   share of PRs that change what players see or hear. The coordinator summarises it in the chat. Run
+   the workflow by hand with "report" ticked to write one early.
+7. **Feedback.** Playtest notes go in a `feedback` issue (or a chat message); Claude turns them into
    new `task` issues.
 
 ## One-time repo settings (owner)
@@ -47,4 +62,5 @@
 - Settings → Actions → General → Workflow permissions: **Read and write permissions** (the queue
   rebases branches, merges and starts workflows with the built-in token).
 - Settings → General → Pull Requests: tick **Automatically delete head branches** (optional).
-- Create labels `task`, `ready`, `feedback`, `hold`, `automerge`, `queue-conflict`.
+- Create labels `task`, `ready`, `feedback`, `hold`, `automerge`, `queue-conflict` (the daily run adds
+  `proposed`, `needs-yes` and `report` itself).
