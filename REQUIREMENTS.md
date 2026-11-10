@@ -8,7 +8,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 - **Play dev (latest main):** https://hitoshi85.github.io/train-simulator/dev/ (add `?v=<short commit>`
   on a phone to skip a cached copy; the current links with that suffix are always in [README.md](README.md))
 - **Backlog:** [open issues](https://github.com/Hitoshi85/train-simulator/issues)
-- **Last updated:** 2026-11-08
+- **Last updated:** 2026-11-10
 
 ## 1. Core requirements
 
@@ -159,6 +159,7 @@ Newest at the bottom. "Outcome" says what was done about it.
 | 2026-11-09 | New list: fast rollback of versions/releases; more realistic, less obnoxious acceleration/deceleration sounds; label screenshots with the PR; label threads with the PR. | Fast rollback built in this PR (W18); sounds and labels handled in other threads. |
 | 2026-11-09 | "More realistic and less obnoxious acceleration/deceleration sounds." | Asked two questions: motor sound, A modern inverter whine; braking, A gentle air (soft puff on harder braking, faint hiss only on heavy braking, falling regen whine). Implemented (R26). |
 | 2026-11-09 | "Ship" | Promoted dev d2c93ab to prod as release prod-2. The Ship run skipped its live check (workflow bug, fixed in this PR); a follow-up deploy run verified prod-2 live and updated the README. |
+| 2026-11-10 | Review the tasks in the agentic AI review doc and decide them one by one. | Decided A to H one at a time; all eight filed as `task` issues, none built yet. A: scheduled reviewer only, run daily, not hourly (#41). B: veto window with no triage run, 36 hours instead of 24 (#42). C: batch all of a task's questions in one message, no "decide and show" (#43). D: screenshot comparison and balance test, one reviewer, no second fresh-session review (#44). E: split game.js as written, after A to D land (#45). F: as written (#46). G: as written (#47). H: weekly report folded into the daily reviewer run, on Fridays (#48). |
 
 ## 4. Open backlog
 
@@ -166,8 +167,14 @@ Add the `ready` label to an issue to start it.
 
 | Issue | Task | Status |
 |---|---|---|
-| (none open) | | |
-| (parked, no issue) | Agentic AI review, 2026-11-08: [docs/agentic-review-2026-11-08.md](docs/agentic-review-2026-11-08.md). Stored for later; do not file its tasks or act on its recommendations until Hitoshi says so. | Parked |
+| [#41](https://github.com/Hitoshi85/train-simulator/issues/41) | A. Daily scheduled reviewer run (agentic review) | Approved, not started |
+| [#42](https://github.com/Hitoshi85/train-simulator/issues/42) | B. Backlog veto window (36 hours), after #41 | Approved, not started |
+| [#43](https://github.com/Hitoshi85/train-simulator/issues/43) | C. Batch clarifying questions in one message | Approved, not started |
+| [#44](https://github.com/Hitoshi85/train-simulator/issues/44) | D. AI playtest on feature PRs (screenshots and balance) | Approved, not started |
+| [#45](https://github.com/Hitoshi85/train-simulator/issues/45) | E. Split game.js into native ES modules, after A to D | Approved, not started |
+| [#46](https://github.com/Hitoshi85/train-simulator/issues/46) | F. Slim REQUIREMENTS.md and check it in CI | Approved, not started |
+| [#47](https://github.com/Hitoshi85/train-simulator/issues/47) | G. Test the deploy workflow logic (needs "m") | Approved, not started |
+| [#48](https://github.com/Hitoshi85/train-simulator/issues/48) | H. Weekly report on Fridays, after #41 | Approved, not started |
 
 Removed by the owner on 2026-11-08 (closed as not planned): [#5](https://github.com/Hitoshi85/train-simulator/issues/5) cat bonus rebalance, [#6](https://github.com/Hitoshi85/train-simulator/issues/6) save best score.
 
