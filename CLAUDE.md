@@ -60,12 +60,17 @@ commit (docs-only PRs skip it). On BLOCK, fix it and ask again. Full process: `d
 
 ## Requirements and feedback log
 
-`REQUIREMENTS.md` is the single shareable record of requirements, shipped changes, the owner's
-feedback and the backlog. Every thread keeps it current in the same PR as its change:
-add a row to **Shipped changes** for each change, log every piece of owner feedback (dated, with
-the outcome) in **Feedback log**, update requirement statuses, and keep **Open backlog** in step
-with the issues. A thread that only receives feedback (no code change) still opens a small PR
-updating the log.
+`REQUIREMENTS.md` is the single shareable record of requirements, the owner's feedback and the
+backlog. Every thread keeps it current in the same PR as its change: log every piece of owner
+feedback (dated, with the outcome) in **Feedback log**, update requirement statuses, and keep
+**Open backlog** in step with the issues. A thread that only receives feedback (no code change) still
+opens a small PR updating the log. Shipped changes are the merged PRs and `prod-N` releases (no table).
+Keep it small, `tests/requirements.spec.js` checks it in CI:
+- The feedback log keeps the latest 20 rows; move older rows to the bottom of `docs/feedback-archive.md`.
+- Write PR numbers, not "this PR". Once the PR is open, use its number; any "this PR" left is filled
+  in by the merge queue on merge, and the check fails if one reaches `main` (fill it in by hand before
+  an "m" merge).
+- R and W requirements stay numbered in order with no gaps; the play links match README.md.
 
 ## Commands
 
