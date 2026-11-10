@@ -30,8 +30,8 @@
    one Pages site: **prod** at `https://hitoshi85.github.io/train-simulator/` and **dev** at
    `https://hitoshi85.github.io/train-simulator/dev/` (marked with a "DEV <commit>" tag and title). A merge to `main`
    re-runs the checks and updates dev only; prod is rebuilt from the `prod` git tag. Each site has a
-   `version.json` with its commit. The build (`.github/scripts/build-site.sh`) loads `game.js` and
-   `style.css` as `?v=<commit>` and adds a tiny check that reloads the page once when `version.json`
+   `version.json` with its commit. The build (`.github/scripts/build-site.sh`) loads `game.js`, every
+   module in `src/` and `style.css` as `?v=<commit>` and adds a tiny check that reloads the page once when `version.json`
    shows a newer deploy, so phones get the latest version without a hard refresh. Then **verify-live** checks both live sites serve the right commit
    and that the game starts. The **links** job then updates the version labels next to the prod and dev links at the top of
    `README.md` and comments the dev link (with `?v=<short-sha>`) on the merged PR.

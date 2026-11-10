@@ -20,7 +20,7 @@ every PR, and the merge queue waits for its verdict. Hitoshi never has to review
   Open surrounding code only when a changed line cannot be judged without it.
 - Look only for real problems: bugs, crashes, broken game logic, things that break on phones (touch,
   small screens), slow per-frame drawing, broken tests or the `window.__train` test hook, a missing
-  `?v=N` bump in `index.html` when `game.js` or `style.css` changed, and anything copied from a
+  `?v=N` bump in `index.html` when `game.js`, `src/` or `style.css` changed, and anything copied from a
   commercial train game. Skip style nitpicks.
 - Post **one** PR comment: a short, friendly summary (a line per finding with `file:line`, or
   "No problems found."), ending with the verdict marker for the PR's current head commit:
@@ -33,7 +33,7 @@ every PR, and the merge queue waits for its verdict. Hitoshi never has to review
 - On `BLOCK`, the reviewer also tells the coordinator, so the PR's own thread fixes it and asks for
   a new review. Nits never block.
 
-## AI playtest for PRs that touch `game.js` or `style.css`
+## AI playtest for PRs that touch `game.js`, `src/` or `style.css`
 
 The reviewer judges how the change looks and plays, not only whether the code works. From the PR's
 latest **CI** run (`actions_list` → the run's artifacts, then download):

@@ -2,7 +2,32 @@
 
 An original browser train-driving game (genre-inspired, never a copy of an existing game: no names,
 characters, art, music, routes or UI lifted from commercial titles). Plain HTML/CSS/JS, no build step.
-GitHub Pages deploys `index.html`, `game.js`, `style.css` (and `assets/` if present) from `main`.
+GitHub Pages deploys `index.html`, `game.js`, `src/`, `style.css` (and `assets/` if present) from `main`.
+
+## Code layout
+
+`game.js` is the entry module (`<script type="module">`): the main loop and `window.__train`. The game
+lives in native ES modules under `src/`, no bundler. Each module imports what it uses by name; shared
+state that changes (`g`, `LIMITS`, `ctx`, `cam`, `light`) is a live export, changed only by its owner.
+
+| Module | Owns |
+|---|---|
+| `src/route.js` | Route data (`ROUTE`, `STATIONS`, limits, `GRADES`, curve), Local/Express stops, cats along the line, `hash` |
+| `src/physics.js` | Lever notches (`P_MAX`, `B_MAX`, `EB`) and `accel` |
+| `src/save.js` | On-device progress (`save`) and `rankOf` |
+| `src/run.js` | Game state `g`, weather, departures, judging stops, saving a run, `update(dt)` |
+| `src/audio.js` | `sound` (Web Audio) and the power/brake mix |
+| `src/ui.js` | Keys, touch buttons, pause, `act()`, player feedback |
+| `src/debug.js` | Render counters (`stats`) and the hook object behind `window.__train` |
+| `src/render/canvas.js` | Canvas, current context, camera, projection, colour helpers |
+| `src/render/light.js` | Time-of-day light and weather tint (`lightAt`, `lit`) |
+| `src/render/sky.js` | Sky, clouds, map bearing and distant landmarks |
+| `src/render/land.js` | Scenes by zone (`scene`), hills, ground, paddies, sea |
+| `src/render/props.js` | Trees, houses, shrines, grass, cats |
+| `src/render/effects.js` | Birds, petals, fireflies, wash, night lights, rain and snow |
+| `src/render/world.js` | `drawWorld`: one camera view (track, signs, platforms, our train) |
+| `src/render/insets.js` | Camera insets |
+| `src/render/hud.js` | Dashboard, messages and panels |
 
 ## Working on a task
 
@@ -19,9 +44,9 @@ GitHub Pages deploys `index.html`, `game.js`, `style.css` (and `assets/` if pres
 5. Run `npm ci` once, then `npm run check` (ESLint + Playwright smoke test) before every push.
    Locally, Chromium is usually preinstalled; in CI the workflow installs it.
 6. Add or extend a test in `tests/` for new behaviour whenever it can be checked headlessly.
-7. If `game.js` or `style.css` changed, bump `?v=N` on both asset URLs in `index.html` so
-   browsers load the new version. (The Pages build also rewrites them to `?v=<commit>` and adds a
-   reload-on-new-deploy check, see `.github/scripts/build-site.sh`.)
+7. If `game.js`, `src/` or `style.css` changed, bump `?v=N` on both asset URLs in `index.html` so
+   browsers load the new version. (The Pages build also rewrites them, and every module import, to
+   `?v=<commit>` and adds a reload-on-new-deploy check, see `.github/scripts/build-site.sh`.)
 8. Open the PR with a screenshot of the game that highlights the new feature (commit it under
    `docs/screens/` and embed it as an image in the PR body; the merge queue looks for it).
    Wait for CI, fix failures until green. Never skip or weaken a test to get green.

@@ -38,6 +38,16 @@ for (const site of SITES) {
       expect(errors).toEqual([]);
     });
 
+    test('loads every game module with the same version', async ({ page, request }) => {
+      const short = (await (await request.get(`${site.dir}version.json`)).json()).sha.slice(0, 7);
+      const scripts = [];
+      page.on('request', (r) => { if (r.resourceType() === 'script' && /\/(game|src\/.+)\.js/.test(r.url())) scripts.push(new URL(r.url())); });
+      await page.goto(`${site.dir}index.html`);
+      await page.waitForFunction(() => window.__train && window.__train.stats.frames > 2, null, { timeout: 15000 });
+      expect(scripts.some((u) => u.pathname.endsWith('/src/render/world.js')), 'modules under src/ load').toBe(true);
+      for (const u of scripts) expect(u.searchParams.get('v'), u.pathname).toBe(short);
+    });
+
     test('reloads once onto a newer deploy, without looping', async ({ page }) => {
       const newer = 'f'.repeat(40);
       let checks = 0;
