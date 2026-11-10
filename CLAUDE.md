@@ -7,8 +7,10 @@ GitHub Pages deploys `index.html`, `game.js`, `style.css` (and `assets/` if pres
 ## Working on a task
 
 1. Each task is a GitHub issue labelled `task` with a **Done when** list. Work only on that issue.
-2. Before building, ask the owner clarifying questions one at a time, each with 3 options and a
-   recommendation.
+2. Before building, ask the owner all of the task's clarifying questions together in one message
+   (one card with every question), each with exactly 3 options, the recommended one first and
+   marked "(Recommended)". Ask about every change, small ones too; do not decide on the owner's
+   behalf. Only ask a follow-up round if an answer opens a new question.
 3. Use a few focused subagents in parallel for independent parts of a task; keep token use
    balanced (few agents, small prompts).
 4. Branch from `main`, keep the PR small, and put `Closes #N` in the PR body.
