@@ -48,7 +48,9 @@ mark_dev() { # <dir> <sha>
   local html="$1/index.html" short=${2:0:7}
   local badge='<div id="env-badge" style="position:fixed;top:4px;left:50%;transform:translateX(-50%);z-index:9999;pointer-events:none;padding:2px 8px;border-radius:6px;background:#d6336c;color:#fff;font:700 12px/1.4 system-ui,sans-serif;letter-spacing:.08em;opacity:.9">DEV '"$short"'</div>'
   sed -i "s@</body>@${badge}\n</body>@; s@<title>@<title>DEV ${short} · @" "$html"
-  grep -q 'id="env-badge"' "$html" && grep -q "<title>DEV ${short}" "$html" || { echo "DEV mark not added to $html" >&2; exit 1; }
+  if ! grep -q 'id="env-badge"' "$html" || ! grep -q "<title>DEV ${short}" "$html"; then
+    echo "DEV mark not added to $html" >&2; exit 1
+  fi
 }
 
 rm -rf "$out"

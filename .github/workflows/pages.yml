@@ -78,46 +78,7 @@ jobs:
         id: plan
         env:
           SITE: ${{ steps.pages.outputs.base_url }}
-        run: |
-          set -euo pipefail
-          current_prod=$(git rev-parse -q --verify 'refs/tags/prod^{commit}' || true)
-          last_n=$(git tag -l 'prod-*' | sed 's/^prod-//' | grep -E '^[0-9]+$' | sort -n | tail -1 || true)
-          tag_of() { git tag -l 'prod-*' --points-at "$1" | sort -t- -k2 -n | tail -1; }
-          # What dev serves right now. Ship and rollback keep dev as it is, and Ship promotes exactly
-          # that commit, so they stop rather than guess when it cannot be read.
-          dev_live() {
-            local sha
-            sha=$(curl -fsS "${SITE}/dev/version.json?t=$(date +%s)" | jq -r .sha 2>/dev/null || true)
-            if ! git cat-file -e "${sha:-none}^{commit}" 2>/dev/null; then
-              echo "::error::Could not read which commit dev serves from ${SITE}/dev/version.json (got '${sha:-nothing}'). Nothing was changed; check that dev is live, then try again." >&2
-              exit 1
-            fi
-            echo "$sha"
-          }
-          new_release=false
-          case "$ACTION" in
-            deploy)
-              dev=$GITHUB_SHA
-              if [ -n "$current_prod" ]; then prod=$current_prod; prod_tag=$(tag_of "$prod")
-              else prod=$GITHUB_SHA; prod_tag=prod-1; new_release=true; fi # first run: prod starts as today's game
-              ;;
-            ship)
-              dev=$(dev_live); prod=$dev
-              if [ "$prod" = "$current_prod" ]; then prod_tag=$(tag_of "$prod"); echo "::notice::Dev ${prod:0:7} is already prod."
-              else prod_tag="prod-$(( ${last_n:-0} + 1 ))"; new_release=true; fi
-              ;;
-            rollback)
-              dev=$(dev_live)
-              if [ -n "$ROLLBACK_TAG" ]; then prod_tag=$ROLLBACK_TAG
-              else prod_tag=$(git tag -l 'prod-*' | sed 's/^prod-//' | sort -n | awk -v cur="$(tag_of "$current_prod" | sed 's/^prod-//')" '$1 < cur' | tail -1 | sed 's/^/prod-/'); fi
-              [ -n "$prod_tag" ] || { echo "::error::There is no earlier prod release to roll back to."; exit 1; }
-              prod=$(git rev-parse -q --verify "refs/tags/${prod_tag}^{commit}") || { echo "::error::No release called '$prod_tag'."; exit 1; }
-              ;;
-            *) echo "::error::Unknown action $ACTION"; exit 1 ;;
-          esac
-          echo "Action $ACTION: prod ${prod:0:7} ($prod_tag), dev ${dev:0:7}"
-          { echo "prod_sha=$prod"; echo "prod_tag=$prod_tag"; echo "dev_sha=$dev"; echo "new_release=$new_release"
-            echo "prev_tag=$(tag_of "${current_prod:-none}" 2>/dev/null || true)"; } >> "$GITHUB_OUTPUT"
+        run: .github/scripts/plan.sh # tested by tests/plan.spec.js
       - name: Build both sites
         run: .github/scripts/build-site.sh "${{ steps.plan.outputs.prod_sha }}" "${{ steps.plan.outputs.dev_sha }}" _site "${{ steps.plan.outputs.prod_tag }}"
       - uses: actions/upload-pages-artifact@v3
@@ -129,7 +90,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PROD_SHA: ${{ steps.plan.outputs.prod_sha }}
           PROD_TAG: ${{ steps.plan.outputs.prod_tag }}
-          PREV_TAG: ${{ steps.plan.outputs.prev_tag }}
+          NOTES_FROM_TAG: ${{ steps.plan.outputs.prev_tag }}
           NEW_RELEASE: ${{ steps.plan.outputs.new_release }}
         run: |
           set -euo pipefail
@@ -138,7 +99,7 @@ jobs:
           if [ "$NEW_RELEASE" = true ]; then
             git tag "$PROD_TAG" "$PROD_SHA"
             git push origin "refs/tags/$PROD_TAG"
-            notes=(--generate-notes); [ -n "$PREV_TAG" ] && notes+=(--notes-start-tag "$PREV_TAG")
+            notes=(--generate-notes); [ -n "$NOTES_FROM_TAG" ] && notes+=(--notes-start-tag "$NOTES_FROM_TAG")
             gh release create "$PROD_TAG" --verify-tag --title "$PROD_TAG (${PROD_SHA:0:7})" "${notes[@]}"
           fi
           git tag -f prod "$PROD_SHA"
