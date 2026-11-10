@@ -7,6 +7,8 @@ GitHub Pages deploys `index.html`, `game.js`, `style.css` (and `assets/` if pres
 ## Working on a task
 
 1. Each task is a GitHub issue labelled `task` with a **Done when** list. Work only on that issue.
+   Tasks Claude proposes get `proposed` (not `ready`); they turn `ready` after a 36-hour veto window
+   (`docs/WORKFLOW.md`). Mark ones that change controls, modes, the route or prod `needs-yes`.
 2. Before building, ask the owner all of the task's clarifying questions together in one message
    (one card with every question), each with exactly 3 options, the recommended one first and
    marked "(Recommended)". Ask about every change, small ones too; do not decide on the owner's
@@ -56,8 +58,9 @@ station becomes impossible. On PRs, CI also uploads main's phone screenshots (`p
 
 ## Project review
 
-After opening a PR or pushing to it, tell the coordinator `Review #N please (head <short sha>)`.
-The project's PR reviewer thread reviews the diff and posts a PR comment with a
+A scheduled Claude run reviews every PR without a verdict on its latest commit once a day (05:47 Japan
+time). When a PR should not wait for it, tell the coordinator `Review #N please (head <short sha>)`.
+The reviewer reviews the diff and posts a PR comment with a
 `<!-- project-review: PASS|BLOCK <sha> -->` verdict; the merge queue waits for a PASS on the latest
 commit (docs-only PRs skip it). On BLOCK, fix it and ask again. Full process: `docs/REVIEW.md`.
 

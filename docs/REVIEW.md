@@ -5,9 +5,13 @@ every PR, and the merge queue waits for its verdict. Hitoshi never has to review
 
 ## When a review happens
 
-1. A thread opens a PR or pushes new commits to it, and tells the coordinator in one line:
-   `Review #N please (head <short sha>)`.
-2. The coordinator passes it to the PR reviewer thread (it starts one if none is open).
+1. **Daily, on a schedule.** A scheduled Claude task ("Aozora Line daily PR review") starts a fresh
+   run every day at 05:47 Japan time. It reviews every open PR whose head commit has no
+   `project-review` verdict yet, following this page, and marks big `proposed` tasks `needs-yes`
+   (see docs/WORKFLOW.md). Nobody has to ask for these reviews.
+2. **Urgent, by request.** When a PR should not wait for the next daily run, its thread can still tell
+   the coordinator `Review #N please (head <short sha>)`, and the coordinator passes it to the PR
+   reviewer thread (it starts one if none is open).
 3. PRs that change only Markdown files, `docs/` or images need no review: the queue lets them through.
 
 ## How the reviewer works (keep it cheap)
