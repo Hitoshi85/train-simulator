@@ -6,7 +6,7 @@ every PR, and the merge queue waits for its verdict. Hitoshi never has to review
 ## When a review happens
 
 1. **Daily, on a schedule.** A scheduled Claude task ("Aozora Line daily PR review") starts a fresh
-   run every day at 05:47 Japan time. It reviews every open PR whose head commit has no
+   run every day at 7:00 New York time. It reviews every open PR whose head commit has no
    `project-review` verdict yet, following this page, and marks big `proposed` tasks `needs-yes`
    (see docs/WORKFLOW.md). Nobody has to ask for these reviews.
 2. **Urgent, by request.** When a PR should not wait for the next daily run, its thread can still tell

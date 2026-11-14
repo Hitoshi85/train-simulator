@@ -2,7 +2,7 @@
 const { test, expect } = require('@playwright/test');
 const d = require('../.github/scripts/daily.js');
 
-const NOW = new Date('2026-11-13T22:00:00Z'); // Saturday 07:00 in Japan
+const NOW = new Date('2026-11-14T12:30:00Z'); // Saturday 07:30 in New York
 const hoursAgo = (h) => new Date(NOW.getTime() - h * 3600 * 1000);
 const issue = (number, labels = ['task', 'proposed'], over = {}) => ({
   number, state: 'open', labels: labels.map((name) => ({ name })), created_at: '2026-11-01T00:00:00Z', ...over,
@@ -64,11 +64,12 @@ test('counts promotions from the last 24 hours only', () => {
   expect(d.countPromoted([[marker(2)], [marker(30)], [{ body: 'hi', created_at: hoursAgo(1).toISOString() }], [marker(23)]], NOW)).toBe(2);
 });
 
-test('the report is written on Fridays in Japan time', () => {
-  expect(d.isReportDay(new Date('2026-11-12T22:00:00Z'))).toBe(true); // Fri 07:00 JST
-  expect(d.isReportDay(new Date('2026-11-13T10:00:00Z'))).toBe(true); // Fri 19:00 JST
-  expect(d.isReportDay(new Date('2026-11-13T22:00:00Z'))).toBe(false); // Sat 07:00 JST
-  expect(d.localDay(new Date('2026-11-12T22:00:00Z')).date).toBe('2026-11-13');
+test('the report is written on Fridays in New York time', () => {
+  expect(d.isReportDay(new Date('2026-11-13T12:30:00Z'))).toBe(true); // Fri 07:30 EST
+  expect(d.isReportDay(new Date('2026-11-14T03:00:00Z'))).toBe(true); // Fri 22:00 EST (already Saturday in UTC)
+  expect(d.isReportDay(new Date('2026-11-13T04:00:00Z'))).toBe(false); // Thu 23:00 EST
+  expect(d.isReportDay(new Date('2026-07-10T11:30:00Z'))).toBe(true); // Fri 07:30 EDT in summer
+  expect(d.localDay(new Date('2026-11-14T03:00:00Z')).date).toBe('2026-11-13');
 });
 
 test('weekly numbers', () => {

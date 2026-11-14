@@ -49,6 +49,8 @@ Oldest at the top.
 | 2026-11-08 | Question: which real line should the 9 stations follow? (options: seaside line Fujisawa to Kamakura via Enoshima, mountain line Odawara to Gora, city corridor Tokyo to Yokohama) | Hitoshi chose the seaside line; built in #24 (R4, R9, R22). |
 | 2026-11-08 | Question: how should day, night, rain and snow be chosen? (options: pick before each run, random each run, change during the run) | Hitoshi chose change during the run: morning to evening to night, with rain or snow rolling in partway. Built in #25 (R19, R23), closes #12. |
 | 2026-11-08 | New list: dev/prod environments with separate links; "Ship" promotes a version to prod; prod/dev links in the README; save progress on the device; players can submit feedback that goes to the backlog and notifies Hitoshi; a review agent inside the project. | Split across threads; player feedback built in #26 (R24); review agent built in #27 (W13). |
+| 2026-11-08 | Question: how should a player's feedback reach the backlog? (options: prefilled GitHub issue link, form service copied into issues daily, serverless relay holding a token) | Hitoshi chose the prefilled GitHub issue (R24). |
+| 2026-11-08 | Question: what should the feedback issue include automatically? (options: game context, only the player's words, context plus a frame snapshot) | Hitoshi chose the game context (R24). |
 
 ## Shipped changes up to 2026-11-10
 

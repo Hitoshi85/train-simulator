@@ -58,7 +58,7 @@ station becomes impossible. On PRs, CI also uploads main's phone screenshots (`p
 
 ## Project review
 
-A scheduled Claude run reviews every PR without a verdict on its latest commit once a day (05:47 Japan
+A scheduled Claude run reviews every PR without a verdict on its latest commit once a day (7:00 New York
 time). When a PR should not wait for it, tell the coordinator `Review #N please (head <short sha>)`.
 The reviewer reviews the diff and posts a PR comment with a
 `<!-- project-review: PASS|BLOCK <sha> -->` verdict; the merge queue waits for a PASS on the latest
