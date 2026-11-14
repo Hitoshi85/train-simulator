@@ -5,8 +5,8 @@ module.exports = [
   { ignores: ['node_modules/', 'test-results/', 'playwright-report/', '_site/', '_site-test/', 'main-src/', 'balance-report/'] },
   js.configs.recommended,
   {
-    files: ['game.js'],
-    languageOptions: { ecmaVersion: 2022, sourceType: 'script', globals: globals.browser },
+    files: ['game.js', 'src/**/*.js'],
+    languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: globals.browser },
     rules: { 'no-unused-vars': ['error', { args: 'none' }] },
   },
   {

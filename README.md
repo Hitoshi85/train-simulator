@@ -14,7 +14,7 @@ A tiny, original train-driving game for the browser. Plain HTML/CSS/JS, no build
 
 ## Play
 
-Open `index.html` in any modern browser, or play the web builds linked at the top of this page.
+Play the web builds linked at the top of this page, or run `npm run serve` and open http://127.0.0.1:8080/ (the game uses ES modules, so opening `index.html` straight from disk does not work).
 
 Every merge to `main` goes to **dev** only. Typing "Ship" in the project chat promotes the version dev
 serves to **prod** as a tagged GitHub release (`prod-1`, `prod-2`, …), and typing "Rollback" (or
