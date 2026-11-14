@@ -9,7 +9,7 @@ import { ctx, W, H, VIEW_H } from './canvas.js';
 const fmtClock = (t) => { t = Math.floor(t); const h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, s = t % 60; return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`; };
 const DESK = '#3f5a52', DESK2 = '#344c45', LIP = '#26372f', PANEL = '#1f2b27', INK = '#eef3e8', DIM = '#a9bdb1';
 // The lever: an upright slot, P3 at the top down to EB at the bottom, one stop per notch.
-const LEVER_X = 760, LEVER_TOP = VIEW_H + 14, LEVER_H = 132, NOTCHES = P_MAX - EB;
+const LEVER_X = 760, LEVER_TOP = VIEW_H + 8, LEVER_H = 112, NOTCHES = P_MAX - EB;
 const notchY = (l) => LEVER_TOP + (P_MAX - l) * LEVER_H / NOTCHES;
 const MAX_KMH = 140; // the speedometer's top speed
 let shown = null; // where the handle is drawn; it slides to the notch rather than jumping
@@ -85,7 +85,7 @@ function drawLever(dt) {
   const target = notchY(g.lever), x = LEVER_X;
   shown = shown === null ? target : shown + (target - shown) * Math.min(1, dt * 14);
   if (Math.abs(target - shown) < 0.3) shown = target;
-  ctx.fillStyle = LIP; roundRect(x - 34, LEVER_TOP - 10, 62, LEVER_H + 20, 12); ctx.fill();
+  ctx.fillStyle = LIP; roundRect(x - 34, LEVER_TOP - 8, 62, LEVER_H + 16, 12); ctx.fill();
   ctx.fillStyle = '#0b0b0b'; ctx.fillRect(x - 3, LEVER_TOP, 6, LEVER_H);
   ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
   for (let n = EB; n <= P_MAX; n++) {
@@ -150,7 +150,7 @@ function drawCab() {
   ctx.fillText(fmtClock(g.sched), 446 + 160 - 8, Y + 12 + 16 + (140 - 12) / 3);
   drawApproach(616, Y + 12, 50, 140, d);
   const grip = drawLever(dt);
-  drawPaw(grip.x + 4, grip.y + 6, COATS.find((c) => c.id === g.coat) || COATS[0]);
+  drawPaw(grip.x + 4, grip.y + 2, COATS.find((c) => c.id === g.coat) || COATS[0]);
 }
 
 export { drawCab, notchY };
