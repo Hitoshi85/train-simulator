@@ -500,3 +500,32 @@ test('power and brake sounds: soft inverter whine follows speed, air hiss only o
   expect(m.eb.hiss).toBeGreaterThan(m.b3.hiss);
   expect(m.stopped.whine + m.stopped.hiss).toBe(0);
 });
+
+test('cab desk: a cat paw rests on the upright lever, in a new coat each run', async ({ page }) => {
+  const r = await page.evaluate(async () => {
+    const T = window.__train, wait = () => new Promise((ok) => setTimeout(ok, 120));
+    T.paused = true;
+    const ids = T.COATS.map((c) => c.id);
+    T.act('enter');
+    const before = T.stats.pawDrawn;
+    T.render(); await wait(); T.render();
+    const atP1 = T.stats.pawY, coat = T.state.coat, drawnCoat = T.stats.pawCoat;
+    T.act('power'); T.act('power');
+    for (let i = 0; i < 4; i++) { await wait(); T.render(); } // the handle slides to the notch
+    const atP3 = T.stats.pawY;
+    T.act('eb');
+    for (let i = 0; i < 4; i++) { await wait(); T.render(); }
+    const atEB = T.stats.pawY;
+    // play again from the end of the line: a different cat takes the controls
+    T.state.state = 'end'; T.act('enter');
+    return { ids, drawn: T.stats.pawDrawn - before, coat, drawnCoat, atP1, atP3, atEB, next: T.state.coat };
+  });
+  expect(r.drawn).toBeGreaterThan(0);
+  expect(r.ids.length).toBeGreaterThanOrEqual(6);
+  expect(r.ids).toContain(r.coat);
+  expect(r.drawnCoat).toBe(r.coat);          // the paw wears this run's coat
+  expect(r.atP3).toBeLessThan(r.atP1);       // power is up the lever...
+  expect(r.atEB).toBeGreaterThan(r.atP1);    // ...and the emergency brake at the bottom
+  expect(r.ids).toContain(r.next);
+  expect(r.next).not.toBe(r.coat);           // never the same cat twice in a row
+});

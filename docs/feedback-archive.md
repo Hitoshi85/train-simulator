@@ -54,6 +54,8 @@ Oldest at the top.
 | 2026-11-08 | "Review agent but within the project and not a separate setup." | Replaces the API-key review workflow with a Claude reviewer thread in the project (W13). |
 | 2026-11-08 | Question: how should auto-merge wait for the review? (options: queue waits for a passing review of the latest commit, every PR starts on hold, advice only). Hitoshi: "I don't want to review small PRs for dev." | Built the first option: the reviewer thread, not Hitoshi, reviews; small PRs still merge on their own (W13). |
 | 2026-11-08 | Question: what should be saved? (options: best scores and settings; plus resume a run from the last station; plus run history and lifetime totals) | Hitoshi chose best scores, settings and resume (R25). |
+| 2026-11-08 | Question: how should resuming work? (options: title offers Continue or New run; jump straight back in; small Continue button on the normal title) | Hitoshi chose Continue or New run on the title (R25). |
+| 2026-11-08 | Question: which links should dev and prod use? (options: prod keeps the current link and dev moves to /dev/, both under /prod/ and /dev/, dev keeps the current link and prod moves to /prod/) | Hitoshi chose prod at the current link, dev at /dev/ (W16). |
 
 ## Shipped changes up to 2026-11-10
 

@@ -3,6 +3,26 @@ import { STATIONS, useLimits, stopsAt, CAT_BONUS, limitAt, gradeAt, catsBetween 
 import { B_MAX, EB, accel } from './physics.js';
 import { save, rankOf } from './save.js';
 
+// ---------- The cat at the controls ----------
+// Each run a random cat drives; only its paw shows, resting on the lever (src/render/cab.js).
+// fur: the leg, toes: the paw (if different), stripe: tabby bands, patches: [colour, x, y] blobs on the leg.
+const COATS = [
+  { id: 'ginger', fur: '#e39a4b', stripe: '#c0702c' },
+  { id: 'calico', fur: '#f5efe4', patches: [['#d9862f', -8, 70], ['#2e2a28', 16, 130]] },
+  { id: 'black', fur: '#2a272d' },
+  { id: 'white', fur: '#f7f5f0' },
+  { id: 'grey-tabby', fur: '#9a958d', stripe: '#5f5a54' },
+  { id: 'siamese', fur: '#efe2c8', toes: '#5b4436' },
+  { id: 'tuxedo', fur: '#25232a', toes: '#f7f5f0' },
+  { id: 'blue-grey', fur: '#8b97a6' },
+  { id: 'tortoiseshell', fur: '#3b2a22', patches: [['#c8732e', 10, 50], ['#e09a4a', -10, 120]] },
+];
+// A new cat each run, never the same coat twice in a row.
+function pickCoat(prev) {
+  const pool = COATS.filter((c) => c.id !== prev);
+  return pool[Math.floor(Math.random() * pool.length)].id;
+}
+
 // ---------- Game state ----------
 let g;
 function reset() {
@@ -18,6 +38,7 @@ function reset() {
     results: [], msg: '', msgT: 0, timer: 0, failed: false,
     paused: false,              // player pause (P / Esc / Pause button); only while running
     wx: pickWeather(), wxSaid: 0, // this run's weather (see weatherAt)
+    coat: pickCoat(g && g.coat), // this run's cat at the controls (see COATS)
   };
 }
 // ---------- Weather: rain or snow rolls in partway along the run, then may clear ----------
@@ -126,4 +147,4 @@ function update(dt) {
   }
 }
 
-export { g, reset, weatherAt, setMode, nextStop, startSegment, flash, resumeRun, update };
+export { COATS, g, reset, weatherAt, setMode, nextStop, startSegment, flash, resumeRun, update };

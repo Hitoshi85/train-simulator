@@ -8,7 +8,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 - **Play dev (latest main):** https://hitoshi85.github.io/train-simulator/dev/ (add `?v=<short commit>`
   on a phone to skip a cached copy; the current links with that suffix are always in [README.md](README.md))
 - **Backlog:** [open issues](https://github.com/Hitoshi85/train-simulator/issues)
-- **Last updated:** 2026-11-10
+- **Last updated:** 2026-11-14
 
 ## 1. Core requirements
 
@@ -43,6 +43,7 @@ is recorded here in the same PR or thread that handles it (see the rule in [CLAU
 | R25 | Progress is saved on the device (browser localStorage, no account): best score and rank per mode, settings (mode, sound), and a run in progress at the last station reached. On reopening, the title offers "Continue from the station" (Enter / tap) or "New run" (N). One versioned record (`aozora.save`, v1) so it can later move to cloud accounts. The dev site keeps a separate save (`aozora.save.dev`) so testing never touches prod saves. | Done (#28, dev split in #33) |
 | R26 | Power and brake sounds like a modern commuter EMU, soft and never harsh: a smooth inverter whine that rises in pitch with speed under power, falls under regenerative braking and fades out below about 7 km/h, silent when coasting; a gentle "pshh" when the brake goes on harder and a sigh on release; a faint air hiss only on B3 and EB. | Done (#38) |
 | R27 | Legs between stations take about half as long (Hitoshi's choice, 2026-11-14: "bit of both", then half the track plus stronger motors): stations sit half as far apart, speed limits are about 30% higher (open track 110–115 km/h, speedometer to 140), the motors are about 40% stronger (full power up to 60 km/h instead of 40) so the higher limits are reachable, and the timetable is retimed from playtests (Local 505 s of driving instead of 835, Express 330 s instead of 605). Brakes are unchanged. An overrun now always scores 0, cats included. | In review ([#58](https://github.com/Hitoshi85/train-simulator/pull/58)) |
+| R28 | Driving from inside the cab: the front window keeps most of the screen, framed by painted pillars, above a green painted driver's desk with the speedometer, readouts (next stop, limits, gradient, distance to the mark, clock and due time, score), the 50 m approach bar and an upright one-handle lever (P3 at the top, EB at the bottom) whose handle slides to each notch. A cat's paw always rests on the lever grip; each run a random cat drives (ginger, calico, black, white, grey tabby, Siamese, tuxedo, blue-grey, tortoiseshell; never the same twice in a row), shown only by the paw's colours. | Done ([#PRNUM](https://github.com/Hitoshi85/train-simulator/pull/PRNUM)) |
 
 ### How we work
 
@@ -84,8 +85,6 @@ Newest at the bottom, latest 20 rows only: when a new row would make 21, move th
 
 | Date | Feedback / request from Hitoshi | Outcome |
 |---|---|---|
-| 2026-11-08 | Question: how should resuming work? (options: title offers Continue or New run; jump straight back in; small Continue button on the normal title) | Hitoshi chose Continue or New run on the title (R25). |
-| 2026-11-08 | Question: which links should dev and prod use? (options: prod keeps the current link and dev moves to /dev/, both under /prod/ and /dev/, dev keeps the current link and prod moves to /prod/) | Hitoshi chose prod at the current link, dev at /dev/ (W16). |
 | 2026-11-08 | Question: how should the dev game show it is dev? (options: small DEV tag in a corner, no marker, tags on both) | Hitoshi chose no marker: dev and prod look the same; `version.json` on each site names its commit (W16). |
 | 2026-11-08 | "Make sure that both dev and prod are mobile friendly and does not require a hard refresh to play the latest version." | Added to the dev/prod PR: commit-versioned assets, no-cache page, a version check that reloads once onto a newer deploy, and phone checks on both sites (W17). |
 | 2026-11-08 | "Make dev link clear that it is dev." (changes the earlier no-marker choice) | Dev now shows a small "DEV <commit>" tag at the top centre, ignoring taps, and "DEV" in the page title; prod is unchanged (W16). |
@@ -104,6 +103,8 @@ Newest at the bottom, latest 20 rows only: when a new row would make 21, move th
 | 2026-11-14 | "Shorten time between stations by roughly half." (Also asked: in-cab view and a cat paw on the controls, handled in another thread.) | Built as R27 in [#58](https://github.com/Hitoshi85/train-simulator/pull/58). |
 | 2026-11-14 | Question: how should the trip get about twice as quick? (options: shorter track, faster train on the same track, bit of both) | Hitoshi chose bit of both (R27). |
 | 2026-11-14 | Question: 30% shorter and 30% faster only cut legs about 25%; how to reach half? (options: half track and stronger motors, much shorter track only, keep 30/30) | Hitoshi chose half the track with stronger motors (R27). |
+| 2026-11-14 | Move the POV inside the train car with controls (mockups first) and show a cat paw working the controls, a random cat each run. Answers: desk below with the window above; paw always resting on the lever; paw colour only (no cat name). Picked mockup B (green desk). | Built in [#PRNUM](https://github.com/Hitoshi85/train-simulator/pull/PRNUM) (R28). |
+| 2026-11-14 | "Change to vertical lever" (after picking mockup B with a sideways lever). | The lever is upright (P3 at the top, EB at the bottom) on the green desk, in [#PRNUM](https://github.com/Hitoshi85/train-simulator/pull/PRNUM) (R28). |
 
 ## 4. Open backlog
 

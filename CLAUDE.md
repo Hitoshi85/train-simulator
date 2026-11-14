@@ -15,7 +15,7 @@ state that changes (`g`, `LIMITS`, `ctx`, `cam`, `light`) is a live export, chan
 | `src/route.js` | Route data (`ROUTE`, `STATIONS`, limits, `GRADES`, curve), Local/Express stops, cats along the line, `hash` |
 | `src/physics.js` | Lever notches (`P_MAX`, `B_MAX`, `EB`) and `accel` |
 | `src/save.js` | On-device progress (`save`) and `rankOf` |
-| `src/run.js` | Game state `g`, weather, departures, judging stops, saving a run, `update(dt)` |
+| `src/run.js` | Game state `g`, the run's cat coat (`COATS`), weather, departures, judging stops, saving a run, `update(dt)` |
 | `src/audio.js` | `sound` (Web Audio) and the power/brake mix |
 | `src/ui.js` | Keys, touch buttons, pause, `act()`, player feedback |
 | `src/debug.js` | Render counters (`stats`) and the hook object behind `window.__train` |
@@ -27,7 +27,8 @@ state that changes (`g`, `LIMITS`, `ctx`, `cam`, `light`) is a live export, chan
 | `src/render/effects.js` | Birds, petals, fireflies, wash, night lights, rain and snow |
 | `src/render/world.js` | `drawWorld`: one camera view (track, signs, platforms, our train) |
 | `src/render/insets.js` | Camera insets |
-| `src/render/hud.js` | Dashboard, messages and panels |
+| `src/render/cab.js` | Driver's desk below the window: gauges, readouts, the upright lever and this run's cat paw |
+| `src/render/hud.js` | Overspeed warning, messages and panels |
 
 ## Working on a task
 
@@ -72,7 +73,7 @@ state that changes (`g`, `LIMITS`, `ctx`, `cam`, `light`) is a live export, chan
 `game.js` exposes `window.__train` for tests: `state` (live game state), `act(action)`,
 `save` (on-device progress: `data` with `v`, `settings`, `best`, `run`; `record()`, `setRun()`, `clear()`), `step(dt)` (advance the simulation; does nothing while the player has paused), `setPaused(bool)` (player pause, also `state.paused`), `render()` (draw one frame), `paused` (stop the real-time loop),
 `stats` (`frames`, `catsDrawn`, `trainDrawn`, `gradePostsDrawn`, `trees`, `birds`, `fireflies`, `insets` (count per camera id: front, rear, platform),
-`lastInsets` (ids of insets drawn in the last frame)), `sound` (`muted`, `started`, `toggle()`, `mix(v, lever, state)` (power/brake sound levels: `whineHz`, `whine`, `hiss`)), plus `STATIONS`, `LIMITS`, `GRADES`, `accel(lever, v, grade‰)`, `limitAt`, `gradeAt`, `catsBetween`, `lightAt(pos)` (time-of-day light, `.phase` morning, midday or evening).
+`lastInsets` (ids of insets drawn in the last frame), `pawDrawn`, `pawCoat`, `pawY` (the cat paw on the lever)), `COATS` (cat coats; `state.coat` is this run's), `sound` (`muted`, `started`, `toggle()`, `mix(v, lever, state)` (power/brake sound levels: `whineHz`, `whine`, `hiss`)), plus `STATIONS`, `LIMITS`, `GRADES`, `accel(lever, v, grade‰)`, `limitAt`, `gradeAt`, `catsBetween`, `lightAt(pos)` (time-of-day light, `.phase` morning, midday or evening).
 Keep it working when refactoring; add to it when a new feature needs checking.
 `tests/smoke.spec.js` has an `autopilot()` that drives the full line through `act()`.
 `tests/phone-checks.spec.js` saves phone screenshots to `phone-screenshots/` (a CI artifact) and enforces a
