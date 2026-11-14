@@ -1,14 +1,15 @@
 // Train physics: lever notches and acceleration.
 
 // ---------- Train physics ----------
-// lever: -4 = EB, -3..-1 = B3..B1, 0 = N, 1..3 = P1..P3. P3 and B3 match the old top notches.
+// lever: -4 = EB, -3..-1 = B3..B1, 0 = N, 1..3 = P1..P3. Full power holds up to 60 km/h, then
+// fades with speed (stronger since the legs were halved, R27).
 const P_MAX = 3, B_MAX = 3, EB = -(B_MAX + 1);
 const leverName = (l) => l === EB ? 'EB' : l < 0 ? 'B' + (-l) : l === 0 ? 'N' : 'P' + l;
 // grade in ‰: gravity adds about g × ‰ / 1000 (slows uphill, speeds up downhill).
 function accel(lever, v, grade = 0) {
   const kmh = v * 3.6;
   let a = 0;
-  if (lever > 0) a = lever * 0.28 * (kmh < 40 ? 1 : 40 / kmh);
+  if (lever > 0) a = lever * 0.4 * (kmh < 60 ? 1 : 60 / kmh);
   else if (lever === EB) a = -1.4;
   else if (lever < 0) a = lever * 0.35;
   a -= 0.02 + 0.00003 * v * v; // rolling + air resistance
