@@ -6,7 +6,7 @@ import { STATIONS, GRADES, LIMITS, limitAt, gradeAt, catsBetween, stopsAt, ROUTE
 import { accel } from './src/physics.js';
 import { save } from './src/save.js';
 import { stats, hook } from './src/debug.js';
-import { g, update, weatherAt } from './src/run.js';
+import { g, update, weatherAt, COATS } from './src/run.js';
 import { sound } from './src/audio.js';
 import { act, setPaused, feedbackUrl } from './src/ui.js';
 import { CAM_H } from './src/render/canvas.js';
@@ -15,14 +15,15 @@ import { mapAt } from './src/render/sky.js';
 import { scene, updateScene } from './src/render/land.js';
 import { drawWorld } from './src/render/world.js';
 import { insetViews, drawInsets } from './src/render/insets.js';
-import { drawDash, drawOverlay } from './src/render/hud.js';
+import { drawWarning, drawOverlay } from './src/render/hud.js';
+import { drawCab } from './src/render/cab.js';
 
 // ---------- Main loop ----------
 function render() {
   stats.frames++;
   drawWorld({ pos: g.pos, dir: 1, x: 0, h: CAM_H, frame: true });
   if (g.state !== 'title' && g.state !== 'end') drawInsets();
-  drawDash(); drawOverlay();
+  drawCab(); drawWarning(); drawOverlay();
 }
 // Test hook: draw one camera ('cab', 'front', 'rear', 'platform') full size on the main canvas.
 function renderCam(id) {
@@ -41,7 +42,7 @@ function frame(now) {
 
 
 // Exposed for automated testing: set paused = true, then drive the game with step(dt) and render().
-Object.defineProperties(hook, Object.getOwnPropertyDescriptors({ get state() { return g; }, save, scene, stats, act, step, render, renderCam, setPaused, sound, STATIONS, get LIMITS() { return LIMITS; }, GRADES, accel, limitAt, gradeAt, catsBetween, lightAt, stopsAt, ROUTE, mapAt, weatherAt, feedbackUrl,
+Object.defineProperties(hook, Object.getOwnPropertyDescriptors({ get state() { return g; }, save, scene, stats, act, step, render, renderCam, setPaused, sound, STATIONS, get LIMITS() { return LIMITS; }, GRADES, accel, limitAt, gradeAt, catsBetween, lightAt, stopsAt, ROUTE, mapAt, weatherAt, feedbackUrl, COATS,
   setWeather(kind, from = 0, to = 1e9) { g.wx = { kind, from, to }; }, // 'rain', 'snow' or 'clear' between two positions
   drawView(view) { drawWorld(view); }, // draw one camera's view full size (for screenshots and tests)
 }));
