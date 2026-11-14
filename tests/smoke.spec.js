@@ -72,7 +72,7 @@ test('train physics and speed limits behave', async ({ page }) => {
     const T = window.__train;
     return {
       p5: T.accel(3, 0), p1: T.accel(1, 0), n: T.accel(0, 20), b1: T.accel(-1, 10), b8: T.accel(-3, 10), eb: T.accel(-4, 10),
-      lim0: T.limitAt(0), lim300: T.limitAt(300), limEnd: T.limitAt(99999),
+      lim0: T.limitAt(0), lim150: T.limitAt(150), limEnd: T.limitAt(99999),
     };
   });
   expect(r.p5).toBeGreaterThan(r.p1);
@@ -80,9 +80,25 @@ test('train physics and speed limits behave', async ({ page }) => {
   expect(r.n).toBeLessThan(0);           // coasting slows down
   expect(r.b8).toBeLessThan(r.b1);       // more brake, more decel
   expect(r.eb).toBeLessThan(r.b8);       // EB is strongest
-  expect(r.lim0).toBe(45);
-  expect(r.lim300).toBe(85);
-  expect(r.limEnd).toBe(70);
+  expect(r.lim0).toBe(60);
+  expect(r.lim150).toBe(110);
+  expect(r.limEnd).toBe(90);
+});
+
+test('quick legs: the schedule is about half what it was', async ({ page }) => {
+  const r = await page.evaluate(() => {
+    const T = window.__train, S = T.STATIONS;
+    // Accelerate from a stop on P3 for 30 s on level track.
+    let v = 0; for (let i = 0; i < 600; i++) v += T.accel(3, v, 0) * 0.05;
+    return {
+      local: S.reduce((t, s) => t + (s.run || 0), 0),
+      express: S.reduce((t, s) => t + (s.exp || 0), 0),
+      after30s: v * 3.6,
+    };
+  });
+  expect(r.local).toBeLessThanOrEqual(505);   // was 835 s of driving before legs were halved
+  expect(r.express).toBeLessThanOrEqual(330); // was 605 s
+  expect(r.after30s).toBeGreaterThan(70);     // stronger motors reach the higher limits in time
 });
 
 test('gradients: coasting is slower uphill and faster downhill; stations are level', async ({ page }) => {
@@ -241,7 +257,7 @@ test('scenery follows the real towns along the line', async ({ page }) => {
     T.paused = true;
     T.act('enter');
     const at = (pos) => { T.state.pos = pos; for (let i = 0; i < 40; i++) T.step(0.05); T.state.pos = pos; return [T.scene.cur, T.scene.name]; };
-    return { start: at(100), coast: at(4400), temples: at(7000), end: at(8500) };
+    return { start: at(100), coast: at(2200), temples: at(3500), end: at(4250) };
   });
   expect(r.start).toEqual(['town', 'Fujisawa']);
   expect(r.coast).toEqual(['seaside', 'Shichirigahama coast']);
@@ -256,11 +272,11 @@ test('stations are real towns, and landmarks sit where they are on the map in ev
     T.act('enter');
     const seen = (view) => { T.stats.landmarks = {}; T.drawView(view); return Object.keys(T.stats.landmarks).sort(); };
     const names = T.STATIONS.map((s) => s.name);
-    T.state.pos = 1600; for (let i = 0; i < 40; i++) T.step(0.05); T.state.pos = 1600;
-    const approach = seen({ pos: 1600, dir: 1, x: 0, h: 3 }); // heading for the sea: the island ahead
-    T.state.pos = 4400; for (let i = 0; i < 40; i++) T.step(0.05); T.state.pos = 4400;
-    const ahead = seen({ pos: 4400, dir: 1, x: 0, h: 3 });   // along the coast to the east
-    const behind = seen({ pos: 4320, dir: -1, x: 0, h: 3 }); // rear camera, looking west
+    T.state.pos = 800; for (let i = 0; i < 40; i++) T.step(0.05); T.state.pos = 800;
+    const approach = seen({ pos: 800, dir: 1, x: 0, h: 3 }); // heading for the sea: the island ahead
+    T.state.pos = 2200; for (let i = 0; i < 40; i++) T.step(0.05); T.state.pos = 2200;
+    const ahead = seen({ pos: 2200, dir: 1, x: 0, h: 3 });   // along the coast to the east
+    const behind = seen({ pos: 2160, dir: -1, x: 0, h: 3 }); // rear camera, looking west
     return { names, approach, ahead, behind };
   });
   expect(r.names[0]).toBe('Fujisawa');
@@ -271,12 +287,12 @@ test('stations are real towns, and landmarks sit where they are on the map in ev
   expect(r.behind).toEqual(['enoshima', 'fuji']);
 });
 
-test('stations are about 1 km apart', async ({ page }) => {
+test('stations are about half a kilometre apart', async ({ page }) => {
   const st = await page.evaluate(() => window.__train.STATIONS.map((s) => s.pos));
   expect(st).toHaveLength(9);
   for (let i = 1; i < st.length; i++) {
-    expect(st[i] - st[i - 1]).toBeGreaterThanOrEqual(800);
-    expect(st[i] - st[i - 1]).toBeLessThanOrEqual(1400);
+    expect(st[i] - st[i - 1]).toBeGreaterThanOrEqual(400);
+    expect(st[i] - st[i - 1]).toBeLessThanOrEqual(700);
   }
 });
 
@@ -358,8 +374,8 @@ test('Express mode passes about half the stops with a tighter timetable and high
   await page.locator('#touch button[data-act="power"]').click();
   expect(await mode()).toBe('express');
 
-  const lim = await page.evaluate(() => ({ express: window.__train.limitAt(300), passed: window.__train.STATIONS.filter((_, i) => i > 0 && !window.__train.stopsAt(i, 'express')).map((s) => s.name) }));
-  expect(lim.express).toBe(100); // 85 on Local
+  const lim = await page.evaluate(() => ({ express: window.__train.limitAt(150), passed: window.__train.STATIONS.filter((_, i) => i > 0 && !window.__train.stopsAt(i, 'express')).map((s) => s.name) }));
+  expect(lim.express).toBe(125); // 110 on Local
   expect(lim.passed).toEqual(['Kugenuma', 'Koshigoe', 'Shichirigahama', 'Hase']);
 
   // Passed stations show a PASS board instead of a STOP mark.
@@ -426,18 +442,18 @@ test('rain or snow rolls in partway along the run, in the cab and every camera',
     const picked = { kind: wx.kind, from: wx.from, startClear: T.weatherAt(0).amt, peak: T.weatherAt(wx.from + 500).amt };
     const pixel = (x, y) => [...document.getElementById('game').getContext('2d').getImageData(x, y, 1, 1).data].slice(0, 3);
     const look = (kind) => {
-      T.setWeather(kind, 1000, end);
-      T.state.pos = 2000; T.state.seg = 3;
+      T.setWeather(kind, 500, end);
+      T.state.pos = 1000; T.state.seg = 3;
       const p0 = T.stats.precip; T.render();
-      return { precip: T.stats.precip - p0, sky: pixel(300, 40), ground: pixel(200, 420), label: T.weatherAt(2000).amt };
+      return { precip: T.stats.precip - p0, sky: pixel(300, 40), ground: pixel(200, 420), label: T.weatherAt(1000).amt };
     };
     const clear = look('clear'), rain = look('rain'), snow = look('snow');
-    T.state.state = 'running'; T.setWeather('rain', 2100, end); T.state.v = 20; T.state.lever = 0;
+    T.state.state = 'running'; T.setWeather('rain', 1050, end); T.state.v = 20; T.state.lever = 0;
     for (let i = 0; i < 200; i++) T.step(0.05);
     return { picked, clear, rain, snow, msg: T.state.msg, insets: T.stats.lastInsets.length };
   });
   expect(['rain', 'snow']).toContain(r.picked.kind);
-  expect(r.picked.from).toBeGreaterThan(3000); // starts partway, never at the first stations
+  expect(r.picked.from).toBeGreaterThan(1500); // starts partway, never at the first stations
   expect(r.picked.startClear).toBe(0);
   expect(r.picked.peak).toBe(1);
   expect(r.clear.precip).toBe(0);

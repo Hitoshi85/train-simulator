@@ -10,55 +10,55 @@ const ROUTE = {
   id: 'shonan', name: 'Shonan Coast Line',
   stations: [
     { name: 'Fujisawa',         kanji: '藤沢',       pos: 0, exp: 0 },
-    { name: 'Kugenuma',         kanji: '鵠沼',       pos: 900,  run: 95 },
-    { name: 'Enoshima',         kanji: '江ノ島',     pos: 1800, run: 90, exp: 130 },
-    { name: 'Koshigoe',         kanji: '腰越',       pos: 3000, run: 115 },
-    { name: 'Kamakura-Kokomae', kanji: '鎌倉高校前', pos: 4200, run: 110, exp: 175 },
-    { name: 'Shichirigahama',   kanji: '七里ヶ浜',   pos: 5100, run: 95 },
-    { name: 'Inamuragasaki',    kanji: '稲村ヶ崎',   pos: 6000, run: 90, exp: 140 },
-    { name: 'Hase',             kanji: '長谷',       pos: 7300, run: 120 },
-    { name: 'Kamakura',         kanji: '鎌倉',       pos: 8600, run: 120, exp: 160 },
+    { name: 'Kugenuma',         kanji: '鵠沼',       pos: 450,  run: 55 },
+    { name: 'Enoshima',         kanji: '江ノ島',     pos: 900, run: 60, exp: 75 },
+    { name: 'Koshigoe',         kanji: '腰越',       pos: 1500, run: 70 },
+    { name: 'Kamakura-Kokomae', kanji: '鎌倉高校前', pos: 2100, run: 60, exp: 90 },
+    { name: 'Shichirigahama',   kanji: '七里ヶ浜',   pos: 2550, run: 60 },
+    { name: 'Inamuragasaki',    kanji: '稲村ヶ崎',   pos: 3000, run: 55, exp: 75 },
+    { name: 'Hase',             kanji: '長谷',       pos: 3650, run: 75 },
+    { name: 'Kamakura',         kanji: '鎌倉',       pos: 4300, run: 70, exp: 90 },
   ],
   zones: [
     { at: 0, scene: 'town', name: 'Fujisawa' },
-    { at: 600, scene: 'pines', name: 'Kugenuma pine woods' },
-    { at: 1450, scene: 'seaside', name: 'Enoshima' },
-    { at: 2500, scene: 'town', name: 'Koshigoe' },
-    { at: 3500, scene: 'seaside', name: 'Shichirigahama coast' },
-    { at: 6500, scene: 'temple', name: 'Hase temple hills' },
-    { at: 8100, scene: 'town', name: 'Kamakura' },
+    { at: 300, scene: 'pines', name: 'Kugenuma pine woods' },
+    { at: 720, scene: 'seaside', name: 'Enoshima' },
+    { at: 1250, scene: 'town', name: 'Koshigoe' },
+    { at: 1750, scene: 'seaside', name: 'Shichirigahama coast' },
+    { at: 3250, scene: 'temple', name: 'Hase temple hills' },
+    { at: 4050, scene: 'town', name: 'Kamakura' },
   ],
   // Map layout (m) for distant landmarks: the line heads south to the sea, then east along the coast.
-  turn: [1300, 2700], // the curve from heading south to heading east
+  turn: [650, 1350], // the curve from heading south to heading east
   landmarks: [
     { id: 'fuji', x: -60000, y: 3000 },
-    { id: 'enoshima', x: 300, y: -2900 },
-    { id: 'cape', x: 5900, y: -2300 },
+    { id: 'enoshima', x: 150, y: -1450 },
+    { id: 'cape', x: 2950, y: -1150 },
   ],
 };
 const STATIONS = ROUTE.stations;
 const MODES = ['local', 'express'];
 const MODE_NAMES = { local: 'Local', express: 'Express' };
 const LOCAL_LIMITS = [
-  { at: 0, lim: 45 }, { at: 250, lim: 85 }, { at: 1450, lim: 70 },
-  { at: 1900, lim: 85 }, { at: 3000, lim: 55 }, { at: 3600, lim: 85 },
-  { at: 4350, lim: 75 }, { at: 5300, lim: 60 }, { at: 6150, lim: 90 },
-  { at: 7900, lim: 70 },
+  { at: 0, lim: 60 }, { at: 120, lim: 110 }, { at: 720, lim: 90 },
+  { at: 950, lim: 110 }, { at: 1500, lim: 70 }, { at: 1800, lim: 110 },
+  { at: 2180, lim: 100 }, { at: 2650, lim: 80 }, { at: 3080, lim: 115 },
+  { at: 3950, lim: 90 },
 ];
 // Gradients in per mille (‰): + uphill, - downhill, from `at` until the next entry.
 // Stations sit on level track so stopping on the mark stays fair.
 const GRADES = [
-  { at: 0, pm: 0 }, { at: 200, pm: 10 }, { at: 550, pm: 0 },
-  { at: 1100, pm: -15 }, { at: 1500, pm: 0 },
-  { at: 2000, pm: 20 }, { at: 2450, pm: -10 }, { at: 2700, pm: 0 },
-  { at: 3200, pm: 25 }, { at: 3600, pm: 0 }, { at: 3700, pm: -20 }, { at: 3950, pm: 0 },
-  { at: 4400, pm: -25 }, { at: 4800, pm: 0 },
-  { at: 5300, pm: 15 }, { at: 5700, pm: 0 },
-  { at: 6200, pm: -10 }, { at: 6600, pm: 25 }, { at: 7000, pm: 0 },
-  { at: 7500, pm: -25 }, { at: 8000, pm: -10 }, { at: 8300, pm: 0 },
+  { at: 0, pm: 0 }, { at: 60, pm: 10 }, { at: 240, pm: 0 },
+  { at: 520, pm: -15 }, { at: 690, pm: 0 },
+  { at: 960, pm: 20 }, { at: 1160, pm: -10 }, { at: 1290, pm: 0 },
+  { at: 1600, pm: 25 }, { at: 1780, pm: 0 }, { at: 1800, pm: -20 }, { at: 1900, pm: 0 },
+  { at: 2140, pm: -25 }, { at: 2340, pm: 0 },
+  { at: 2590, pm: 15 }, { at: 2790, pm: 0 },
+  { at: 3040, pm: -10 }, { at: 3240, pm: 25 }, { at: 3440, pm: 0 },
+  { at: 3690, pm: -25 }, { at: 3940, pm: -10 }, { at: 4090, pm: 0 },
 ];
-// Express: +15 km/h on the open stretches (85 km/h and up); slower sections stay as they are.
-const EXPRESS_LIMITS = LOCAL_LIMITS.map((L) => (L.lim >= 85 ? { at: L.at, lim: L.lim + 15 } : L));
+// Express: +15 km/h on the open stretches (110 km/h and up); slower sections stay as they are.
+const EXPRESS_LIMITS = LOCAL_LIMITS.map((L) => (L.lim >= 110 ? { at: L.at, lim: L.lim + 15 } : L));
 let LIMITS = LOCAL_LIMITS;
 function useLimits(mode) { LIMITS = mode === 'express' ? EXPRESS_LIMITS : LOCAL_LIMITS; }
 // Does the train stop at station i in the given mode?

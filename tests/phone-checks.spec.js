@@ -46,7 +46,7 @@ for (const [name, viewport] of [['portrait', { width: 390, height: 844 }], ['lan
       await startRun(page);
       const t = await page.evaluate((wx) => {
         const T = window.__train;
-        if (wx) { T.setWeather(wx); T.state.pos = 8250; T.state.seg = T.STATIONS.length - 1; } // night, three cameras
+        if (wx) { T.setWeather(wx); T.state.pos = 4125; T.state.seg = T.STATIONS.length - 1; } // night, three cameras
         const times = [];
         for (let i = 0; i < 200; i++) {
           T.step(1 / 30);

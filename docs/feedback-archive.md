@@ -51,6 +51,9 @@ Oldest at the top.
 | 2026-11-08 | New list: dev/prod environments with separate links; "Ship" promotes a version to prod; prod/dev links in the README; save progress on the device; players can submit feedback that goes to the backlog and notifies Hitoshi; a review agent inside the project. | Split across threads; player feedback built in #26 (R24); review agent built in #27 (W13). |
 | 2026-11-08 | Question: how should a player's feedback reach the backlog? (options: prefilled GitHub issue link, form service copied into issues daily, serverless relay holding a token) | Hitoshi chose the prefilled GitHub issue (R24). |
 | 2026-11-08 | Question: what should the feedback issue include automatically? (options: game context, only the player's words, context plus a frame snapshot) | Hitoshi chose the game context (R24). |
+| 2026-11-08 | "Review agent but within the project and not a separate setup." | Replaces the API-key review workflow with a Claude reviewer thread in the project (W13). |
+| 2026-11-08 | Question: how should auto-merge wait for the review? (options: queue waits for a passing review of the latest commit, every PR starts on hold, advice only). Hitoshi: "I don't want to review small PRs for dev." | Built the first option: the reviewer thread, not Hitoshi, reviews; small PRs still merge on their own (W13). |
+| 2026-11-08 | Question: what should be saved? (options: best scores and settings; plus resume a run from the last station; plus run history and lifetime totals) | Hitoshi chose best scores, settings and resume (R25). |
 
 ## Shipped changes up to 2026-11-10
 

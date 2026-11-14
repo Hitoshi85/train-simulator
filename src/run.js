@@ -21,10 +21,10 @@ function reset() {
   };
 }
 // ---------- Weather: rain or snow rolls in partway along the run, then may clear ----------
-const WX_RAMP = 400; // metres over which it sets in and clears
+const WX_RAMP = 200; // metres over which it sets in and clears
 function pickWeather() {
-  const end = STATIONS[STATIONS.length - 1].pos, from = 3200 + Math.random() * 1800;
-  return { kind: Math.random() < 0.5 ? 'rain' : 'snow', from, to: Math.min(end + WX_RAMP, from + 2400 + Math.random() * 3000) };
+  const end = STATIONS[STATIONS.length - 1].pos, from = 1600 + Math.random() * 900;
+  return { kind: Math.random() < 0.5 ? 'rain' : 'snow', from, to: Math.min(end + WX_RAMP, from + 1200 + Math.random() * 1500) };
 }
 // How heavy the weather is at a position: 0 = clear, 1 = full rain or snow.
 function weatherAt(pos, wx = g.wx) {
@@ -56,7 +56,7 @@ function judge() {
   let timePts = g.failed ? 0 : Math.round(Math.max(0, 500 - Math.abs(diff) * (diff > 0 ? 10 : 5)));
   let smooth = !g.failed && g.lever >= -2 && g.lever < 0 ? 200 : 0;
   const catPts = g.cats * CAT_BONUS;
-  const total = Math.max(0, stopPts + perfect + timePts + smooth + catPts - g.overspeedPen);
+  const total = g.failed ? 0 : Math.max(0, stopPts + perfect + timePts + smooth + catPts - g.overspeedPen);
   g.score += total;
   g.lastResult = { name: st.name, d, diff, stopPts, perfect, timePts, smooth, pen: g.overspeedPen, cats: g.cats, catPts, total, failed: g.failed };
   g.results.push(g.lastResult);
