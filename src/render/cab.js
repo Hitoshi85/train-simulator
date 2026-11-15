@@ -9,9 +9,9 @@ import { ctx, W, H, VIEW_H } from './canvas.js';
 const fmtClock = (t) => { t = Math.floor(t); const h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, s = t % 60; return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`; };
 const DESK = '#3f5a52', DESK2 = '#344c45', LIP = '#26372f', PANEL = '#1f2b27', INK = '#eef3e8', DIM = '#a9bdb1';
 // The lever: an upright slot, P3 at the top down to EB at the bottom, one stop per notch.
+const MAX_KMH = 140; // the speedometer's top speed
 const LEVER_X = 760, LEVER_TOP = VIEW_H + 8, LEVER_H = 112, NOTCHES = P_MAX - EB;
 const notchY = (l) => LEVER_TOP + (P_MAX - l) * LEVER_H / NOTCHES;
-const MAX_KMH = 140; // the speedometer's top speed
 let shown = null; // where the handle is drawn; it slides to the notch rather than jumping
 
 function roundRect(x, y, w, h, r) {
@@ -80,7 +80,8 @@ function drawApproach(x, y, w, h, d) {
   ctx.fillStyle = DIM; ctx.fillText('50 m', x + w / 2, y + h - 3);
 }
 const leverColour = (n) => n > 0 ? '#7ee787' : n === EB ? '#ff6b6b' : n < 0 ? '#ffb070' : INK;
-// The one-handle lever: P3 at the top, EB at the bottom. Returns where the grip is.
+// The one-handle lever: P3 at the top, EB at the bottom. Returns where the grip is. The handle
+// slides to the notch rather than jumping, and the cat's arm follows it.
 function drawLever(dt) {
   const target = notchY(g.lever), x = LEVER_X;
   shown = shown === null ? target : shown + (target - shown) * Math.min(1, dt * 14);
@@ -98,32 +99,62 @@ function drawLever(dt) {
   ctx.fillStyle = '#c23a3a'; roundRect(x + 24, shown - 10, 32, 20, 9); ctx.fill();
   return { x: x + 40, y: shown };
 }
-// The cat's paw on the grip, its leg reaching in from below.
-function drawPaw(px, py, coat) {
-  const fur = coat.fur, toes = coat.toes || fur, dark = fur === '#2a272d' || fur === '#25232a' || fur === '#3b2a22';
-  ctx.save(); ctx.translate(px, py); ctx.rotate(-0.55); ctx.scale(0.62, 0.62);
-  ctx.lineJoin = 'round';
-  ctx.strokeStyle = dark ? 'rgba(255,255,255,.35)' : 'rgba(0,0,0,.25)'; ctx.lineWidth = 4;
-  ctx.fillStyle = fur;
-  ctx.beginPath(); ctx.moveTo(-26, -6); ctx.quadraticCurveTo(-30, 60, -24, 220); ctx.lineTo(34, 220); ctx.quadraticCurveTo(40, 60, 30, -6); ctx.closePath();
-  ctx.stroke(); ctx.fill();
-  if (coat.stripe) {
-    ctx.strokeStyle = coat.stripe; ctx.lineWidth = 6; ctx.lineCap = 'round';
-    for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(-24, 30 + i * 30); ctx.quadraticCurveTo(0, 22 + i * 30, 30, 34 + i * 30); ctx.stroke(); }
-  }
-  for (const [c, x, y] of coat.patches || []) { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(x, y, 18, 26, 0.3, 0, 7); ctx.fill(); }
-  // the paw and four toes
-  ctx.fillStyle = toes; ctx.strokeStyle = dark && toes === fur ? 'rgba(255,255,255,.35)' : 'rgba(0,0,0,.25)'; ctx.lineWidth = 4;
-  const blob = () => {
-    ctx.beginPath(); ctx.ellipse(2, -8, 34, 26, 0, 0, 7);
-    for (const [tx, ty] of [[-22, -26], [-8, -34], [8, -34], [22, -26]]) { ctx.moveTo(tx + 11, ty); ctx.ellipse(tx, ty, 11, 12, 0, 0, 7); }
+// First person: we are the cat. One straight arm reaches up from the bottom right to the grip
+// and follows the lever; only the arm and paw ever show.
+function drawArm(grip, coat) {
+  const fur = coat.fur, toes = coat.toes || fur, dark = ['#2a272d', '#25232a', '#3b2a22'].includes(fur);
+  const edge = dark ? 'rgba(255,255,255,.45)' : 'rgba(0,0,0,.28)';
+  const sx = W + 50, sy = H + 100; // the shoulder, out of view below the bottom right corner
+  const wx = grip.x + 4, wy = grip.y + 30; // wrist, just behind the paw
+  // a straight arm: the elbow sits halfway, so the arm reads as one smooth limb
+  const ex = (sx + wx) / 2, ey = (sy + wy) / 2;
+  const ang = Math.atan2(grip.y - wy, grip.x - wx); // the way the paw points
+  // One silhouette: upper arm, forearm and paw are drawn twice, first a little wider in the
+  // outline colour, then in fur, so the joints blend into one continuous limb with no seams.
+  const shape = (grow) => {
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const [ax, ay, bx, by, w] of [[sx, sy, ex, ey, 84], [ex, ey, wx, wy, 66], [wx, wy, grip.x, grip.y, 56]]) {
+      ctx.lineWidth = w + grow * 2; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+    }
+    ctx.save(); ctx.translate(grip.x, grip.y); ctx.rotate(ang + Math.PI / 2);
+    ctx.beginPath(); ctx.ellipse(0, 2, 32 + grow, 26 + grow, 0, 0, 7);
+    for (const [tx, ty] of [[-20, -16], [-7, -24], [7, -24], [20, -16]]) { ctx.moveTo(tx + 11 + grow, ty); ctx.ellipse(tx, ty, 11 + grow, 12 + grow, 0, 0, 7); }
+    ctx.fill(); ctx.restore();
   };
-  blob(); ctx.stroke(); blob(); ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,.2)'; ctx.lineWidth = 2;
-  for (const tx of [-15, 0, 15]) { ctx.beginPath(); ctx.moveTo(tx, -30 + (tx ? 4 : 0)); ctx.lineTo(tx, -18); ctx.stroke(); }
-  ctx.fillStyle = '#f2a0b0'; ctx.beginPath(); ctx.ellipse(2, -2, 10, 7, 0, 0, 7); ctx.fill(); // a pink bean peeking out
+  ctx.save();
+  ctx.fillStyle = edge; ctx.strokeStyle = edge; shape(3);
+  ctx.fillStyle = fur; ctx.strokeStyle = fur; shape(0);
+  // markings, kept inside the fur
+  const fl = Math.hypot(wx - ex, wy - ey) || 1, nx = -(wy - ey) / fl, ny = (wx - ex) / fl;
+  if (coat.stripe) {
+    ctx.strokeStyle = coat.stripe; ctx.lineWidth = 7; ctx.lineCap = 'round';
+    for (const t of [0.25, 0.5, 0.75]) {
+      const px = ex + (wx - ex) * t, py = ey + (wy - ey) * t;
+      ctx.beginPath(); ctx.moveTo(px - nx * 28, py - ny * 28); ctx.quadraticCurveTo(px + 3, py - 4, px + nx * 28, py + ny * 28); ctx.stroke();
+    }
+    const ul = Math.hypot(ex - sx, ey - sy) || 1, ux = -(ey - sy) / ul, uy = (ex - sx) / ul;
+    for (const t of [0.4, 0.7]) {
+      const px = sx + (ex - sx) * t, py = sy + (ey - sy) * t;
+      ctx.beginPath(); ctx.moveTo(px - ux * 36, py - uy * 36); ctx.quadraticCurveTo(px + 3, py - 4, px + ux * 36, py + uy * 36); ctx.stroke();
+    }
+  }
+  (coat.patches || []).forEach(([c], i) => {
+    ctx.fillStyle = c; ctx.beginPath();
+    if (i === 0) { const px = ex + (wx - ex) * 0.45, py = ey + (wy - ey) * 0.45; ctx.ellipse(px, py, 24, 18, Math.atan2(wy - ey, wx - ex), 0, 7); }
+    else { const px = sx + (ex - sx) * 0.6, py = sy + (ey - sy) * 0.6; ctx.ellipse(px, py, 26, 20, 0.6, 0, 7); }
+    ctx.fill();
+  });
+  // the paw in its own colour (white socks, Siamese points), blended into the wrist
+  ctx.translate(grip.x, grip.y); ctx.rotate(ang + Math.PI / 2);
+  if (toes !== fur) {
+    ctx.fillStyle = toes; ctx.beginPath(); ctx.ellipse(0, 2, 32, 26, 0, 0, 7);
+    for (const [tx, ty] of [[-20, -16], [-7, -24], [7, -24], [20, -16]]) { ctx.moveTo(tx + 11, ty); ctx.ellipse(tx, ty, 11, 12, 0, 0, 7); }
+    ctx.fill(); ctx.fillRect(-29, 0, 58, 26); // the sock runs a little way up the leg
+  }
+  ctx.strokeStyle = 'rgba(0,0,0,.22)'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  for (const tx of [-13, 0, 13]) { ctx.beginPath(); ctx.moveTo(tx, -20); ctx.lineTo(tx, -9); ctx.stroke(); }
   ctx.restore();
-  stats.pawDrawn++; stats.pawCoat = coat.id; stats.pawY = py;
+  stats.pawDrawn++; stats.pawCoat = coat.id; stats.pawY = grip.y; stats.pawX = grip.x; stats.shoulder = [sx, sy]; 
 }
 
 let lastT = 0;
@@ -150,7 +181,7 @@ function drawCab() {
   ctx.fillText(fmtClock(g.sched), 446 + 160 - 8, Y + 12 + 16 + (140 - 12) / 3);
   drawApproach(616, Y + 12, 50, 140, d);
   const grip = drawLever(dt);
-  drawPaw(grip.x + 4, grip.y + 2, COATS.find((c) => c.id === g.coat) || COATS[0]);
+  drawArm(grip, COATS.find((c) => c.id === g.coat) || COATS[0]);
 }
 
 export { drawCab, notchY };

@@ -56,6 +56,8 @@ Oldest at the top.
 | 2026-11-08 | Question: what should be saved? (options: best scores and settings; plus resume a run from the last station; plus run history and lifetime totals) | Hitoshi chose best scores, settings and resume (R25). |
 | 2026-11-08 | Question: how should resuming work? (options: title offers Continue or New run; jump straight back in; small Continue button on the normal title) | Hitoshi chose Continue or New run on the title (R25). |
 | 2026-11-08 | Question: which links should dev and prod use? (options: prod keeps the current link and dev moves to /dev/, both under /prod/ and /dev/, dev keeps the current link and prod moves to /prod/) | Hitoshi chose prod at the current link, dev at /dev/ (W16). |
+| 2026-11-08 | Question: how should the dev game show it is dev? (options: small DEV tag in a corner, no marker, tags on both) | Hitoshi chose no marker: dev and prod look the same; `version.json` on each site names its commit (W16). |
+| 2026-11-08 | "Make sure that both dev and prod are mobile friendly and does not require a hard refresh to play the latest version." | Added to the dev/prod PR: commit-versioned assets, no-cache page, a version check that reloads once onto a newer deploy, and phone checks on both sites (W17). |
 
 ## Shipped changes up to 2026-11-10
 
