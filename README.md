@@ -3,7 +3,7 @@
 ## Play now
 
 <!-- play-links:start -->
-- **Prod** (prod-3, 9841aa8): https://hitoshi85.github.io/train-simulator/
+- **Prod** (prod-4, c164971): https://hitoshi85.github.io/train-simulator/
 - **Dev** (c164971): https://hitoshi85.github.io/train-simulator/dev/
 <!-- play-links:end -->
 
