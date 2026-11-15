@@ -529,3 +529,32 @@ test('cab desk: a cat paw rests on the upright lever, in a new coat each run', a
   expect(r.ids).toContain(r.next);
   expect(r.next).not.toBe(r.coat);           // never the same cat twice in a row
 });
+
+test('cab desk: the cat paw is joined to one unbroken arm, in the coat colours', async ({ page }) => {
+  const r = await page.evaluate(async () => {
+    const T = window.__train, wait = () => new Promise((ok) => setTimeout(ok, 120));
+    T.paused = true; T.act('enter'); T.state.coat = 'ginger';
+    const out = {};
+    for (const [name, lever] of [['p3', 3], ['eb', -4]]) {
+      T.state.lever = lever;
+      for (let i = 0; i < 4; i++) { await wait(); T.render(); }
+      const c = document.getElementById('game').getContext('2d'), s = T.stats;
+      const [sx, sy] = s.shoulder, W = 960, H = 600;
+      // walk from the paw toward the shoulder, inside the canvas, and read the colour on the way
+      const fur = [];
+      for (let t = 0.02; t <= 1; t += 0.02) {
+        const x = Math.round(s.pawX + (sx - s.pawX) * t), y = Math.round(s.pawY + 20 + (sy - s.pawY - 20) * t);
+        if (x >= W - 1 || y >= H - 1) break;
+        const [rr, gg, bb] = c.getImageData(x, y, 1, 1).data;
+        fur.push(Math.abs(rr - 0xe3) + Math.abs(gg - 0x9a) + Math.abs(bb - 0x4b) < 90 || (rr > 180 && gg < 140)); // fur or a tabby stripe
+      }
+      out[name] = { samples: fur.length, gaps: fur.filter((f) => !f).length, y: s.pawY, dbg: [s.pawX, s.pawY, sx, sy] };
+    }
+    return out;
+  });
+  for (const k of ['p3', 'eb']) {
+    expect(r[k].samples, JSON.stringify(r[k])).toBeGreaterThan(3);
+    expect(r[k].gaps).toBe(0); // no desk or sky showing between the paw and the shoulder
+  }
+  expect(r.p3.y).toBeLessThan(r.eb.y);
+});
